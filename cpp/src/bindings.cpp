@@ -11,17 +11,24 @@
 namespace py = pybind11;
 using namespace laplacex;
 
+template <typename T>
+using InputArray = py::array_t<T, py::array::c_style | py::array::forcecast>;
+
 // ---------------------------------------------------------------------------
 // Helpers: numpy array ⇄ std::vector
 // ---------------------------------------------------------------------------
-static std::vector<double> to_vec(py::array_t<double> arr) {
+static std::vector<double> to_vec(InputArray<double> arr) {
     auto buf = arr.request();
+    if (buf.ndim != 1) throw std::invalid_argument("Expected a one-dimensional array");
+    if (buf.size == 0) return {};
     auto* ptr = static_cast<double*>(buf.ptr);
     return std::vector<double>(ptr, ptr + buf.size);
 }
 
-static std::vector<std::complex<double>> to_cvec(py::array_t<std::complex<double>> arr) {
+static std::vector<std::complex<double>> to_cvec(InputArray<std::complex<double>> arr) {
     auto buf = arr.request();
+    if (buf.ndim != 1) throw std::invalid_argument("Expected a one-dimensional array");
+    if (buf.size == 0) return {};
     auto* ptr = static_cast<std::complex<double>*>(buf.ptr);
     return std::vector<std::complex<double>>(ptr, ptr + buf.size);
 }
@@ -72,6 +79,7 @@ PYBIND11_MODULE(_laplacex, m) {
         .def_readwrite("noise_sigma",     &DecomposeConfig::noise_sigma)
         .def_readwrite("snr_threshold",   &DecomposeConfig::snr_threshold)
         .def_readwrite("use_aic",         &DecomposeConfig::use_aic)
+        .def_readwrite("model_selection", &DecomposeConfig::model_selection)
         .def_readwrite("disable_als",     &DecomposeConfig::disable_als)
         .def("__repr__", [](const DecomposeConfig& c) {
             return "<DecomposeConfig wavelet=" + c.wavelet
@@ -113,7 +121,7 @@ PYBIND11_MODULE(_laplacex, m) {
     // *** FIXED Bug 1: removed std::async threading, now runs sequentially ***
     m.def("forward_batch",
         [](py::object f_py,
-           py::array_t<std::complex<double>> s_arr,
+           InputArray<std::complex<double>> s_arr,
            const TransformConfig& cfg) {
             auto f = [&](double t) { return f_py(t).cast<double>(); };
             auto s = to_cvec(s_arr);
@@ -128,9 +136,9 @@ PYBIND11_MODULE(_laplacex, m) {
         "Compute F(s) for an array of complex frequencies (sequential evaluation, GIL-safe).");
 
     m.def("forward_discrete",
-        [](py::array_t<double> t_arr,
-           py::array_t<double> f_arr,
-           py::array_t<std::complex<double>> s_arr,
+        [](InputArray<double> t_arr,
+           InputArray<double> f_arr,
+           InputArray<std::complex<double>> s_arr,
            const TransformConfig& cfg) {
             return forward_discrete(to_vec(t_arr), to_vec(f_arr), to_cvec(s_arr), cfg);
         },
@@ -142,7 +150,7 @@ PYBIND11_MODULE(_laplacex, m) {
     // -----------------------------------------------------------------------
     m.def("inverse_weeks",
         [](py::object F_py,
-           py::array_t<double> t_arr,
+           InputArray<double> t_arr,
            double sigma, double b, int N,
            const TransformConfig& cfg) {
             auto F = [&](std::complex<double> s) {
@@ -159,17 +167,18 @@ PYBIND11_MODULE(_laplacex, m) {
     // Critical: decompose
     // -----------------------------------------------------------------------
     m.def("decompose",
-        [](py::array_t<double> t_arr,
-           py::array_t<double> f_arr,
-           const DecomposeConfig& cfg) {
-            return decompose(to_vec(t_arr), to_vec(f_arr), cfg);
+        [](InputArray<double> t_arr,
+           InputArray<double> f_arr,
+           const DecomposeConfig& cfg, int max_components) {
+            return decompose(to_vec(t_arr), to_vec(f_arr), cfg, max_components);
         },
         py::arg("t"), py::arg("f"), py::arg("cfg") = DecomposeConfig{},
+        py::arg("max_components") = 5,
         "Decompose a time-series into exponential components using wavelet ridges in log-plane.");
 
     m.def("decompose_deflate",
-        [](py::array_t<double> t_arr,
-           py::array_t<double> f_arr,
+        [](InputArray<double> t_arr,
+           InputArray<double> f_arr,
            const DecomposeConfig& cfg,
            int max_components,
            double energy_tol) {
@@ -178,14 +187,14 @@ PYBIND11_MODULE(_laplacex, m) {
         py::arg("t"), py::arg("f"), py::arg("cfg") = DecomposeConfig{},
         py::arg("max_components") = 5,
         py::arg("energy_tol") = 1e-6,
-        "Decompose using iterative deflation: extracts dominant mode from residual repeatedly, then joint ALS refinement.");
+        "Fit exponential components using rate-grid proposals and the shared joint QR/LM solver.");
 
     // -----------------------------------------------------------------------
     // Reconstruction
     // -----------------------------------------------------------------------
     m.def("reconstruct",
         [](const std::vector<ExponentialComponent>& comps,
-           py::array_t<double> t_arr) {
+           InputArray<double> t_arr) {
             return reconstruct(comps, to_vec(t_arr));
         },
         py::arg("components"), py::arg("t_eval"),
@@ -193,7 +202,7 @@ PYBIND11_MODULE(_laplacex, m) {
 
     m.def("reconstruct_laplace",
         [](const std::vector<ExponentialComponent>& comps,
-           py::array_t<std::complex<double>> s_arr) {
+           InputArray<std::complex<double>> s_arr) {
             return reconstruct_laplace(comps, to_cvec(s_arr));
         },
         py::arg("components"), py::arg("s_eval"),
@@ -205,14 +214,14 @@ PYBIND11_MODULE(_laplacex, m) {
     auto u = m.def_submodule("utils", "Signal-processing utilities.");
 
     u.def("to_log_plane",
-        [](py::array_t<double> t, py::array_t<double> f, int n) {
+        [](InputArray<double> t, InputArray<double> f, int n) {
             return utils::to_log_plane(to_vec(t), to_vec(f), n);
         },
         py::arg("t"), py::arg("f"), py::arg("n") = 512,
         "Resample (t, f) onto a uniform log-space grid; returns (x_grid, f_tilde).");
 
     u.def("suggest_log_range",
-        [](py::array_t<double> t, py::array_t<double> f) {
+        [](InputArray<double> t, InputArray<double> f) {
             return utils::suggest_log_range(to_vec(t), to_vec(f));
         },
         py::arg("t"), py::arg("f"),
@@ -228,7 +237,7 @@ PYBIND11_MODULE(_laplacex, m) {
 
     // *** FIXED Bug 2: all generators now return numpy arrays ***
     u.def("gen_step",
-        [](py::array_t<double> t, double t0, double amplitude) {
+        [](InputArray<double> t, double t0, double amplitude) {
             auto v = utils::gen_step(to_vec(t), t0, amplitude);
             return to_arr(v);
         },
@@ -236,7 +245,7 @@ PYBIND11_MODULE(_laplacex, m) {
         "Generate Heaviside step function (returns numpy array).");
 
     u.def("gen_damped_sine",
-        [](py::array_t<double> t, double amp, double rate, double omega, double phi) {
+        [](InputArray<double> t, double amp, double rate, double omega, double phi) {
             auto v = utils::gen_damped_sine(to_vec(t), amp, rate, omega, phi);
             return to_arr(v);
         },
@@ -245,9 +254,9 @@ PYBIND11_MODULE(_laplacex, m) {
         "Generate damped sinusoid (returns numpy array).");
 
     u.def("gen_exp_sum",
-        [](py::array_t<double> t,
-           py::array_t<double> amps,
-           py::array_t<double> rates) {
+        [](InputArray<double> t,
+           InputArray<double> amps,
+           InputArray<double> rates) {
             auto v = utils::gen_exp_sum(to_vec(t), to_vec(amps), to_vec(rates));
             return to_arr(v);
         },
@@ -255,7 +264,7 @@ PYBIND11_MODULE(_laplacex, m) {
         "Generate sum of real exponentials (returns numpy array).");
 
     u.def("gen_diffusion",
-        [](py::array_t<double> t, double amp) {
+        [](InputArray<double> t, double amp) {
             auto v = utils::gen_diffusion(to_vec(t), amp);
             return to_arr(v);
         },
@@ -263,7 +272,7 @@ PYBIND11_MODULE(_laplacex, m) {
         "Generate diffusion-like tail (returns numpy array).");
 
     u.def("add_noise",
-        [](py::array_t<double> f, double sigma, int seed) {
+        [](InputArray<double> f, double sigma, int seed) {
             auto v = utils::add_noise(to_vec(f), sigma, seed);
             return to_arr(v);
         },
@@ -271,10 +280,10 @@ PYBIND11_MODULE(_laplacex, m) {
         "Add Gaussian white noise (returns numpy array).");
 
     u.def("estimate_noise",
-        [](py::array_t<double> f) { return utils::estimate_noise(to_vec(f)); },
+        [](InputArray<double> f) { return utils::estimate_noise(to_vec(f)); },
         py::arg("f"),
         "Estimate noise standard deviation from first differences (MAD estimator).");
 
     // Version
-    m.attr("__version__") = "0.1.0";
+    m.attr("__version__") = "1.0.0";
 }

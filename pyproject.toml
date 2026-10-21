@@ -8,8 +8,8 @@ build-backend = "scikit_build_core.build"
 # ---------------------------------------------------------------------------
 [project]
 name            = "LaplaceX"
-version         = "0.1.0"
-description     = "Industrial-grade Laplace transform library: stable forward and inverse transforms via logarithmic-plane wavelet decomposition"
+version         = "1.0.0"
+description     = "Numerical Laplace transforms and log-plane wavelet exponential decomposition"
 readme          = "README.md"
 license         = { text = "MIT" }
 authors         = [{ name = "Vozmishchev Artem" }]
@@ -42,6 +42,7 @@ dependencies    = [
 [project.optional-dependencies]
 plot    = ["matplotlib>=3.7"]
 data    = ["pandas>=2.0"]
+benchmark = ["scipy>=1.10", "mpmath>=1.3", "matplotlib>=3.7"]
 dev     = [
     "pytest>=7.0",
     "pytest-benchmark",
@@ -52,13 +53,13 @@ dev     = [
     "ruff",
     "mypy",
 ]
-all     = ["LaplaceX[plot,data,dev]"]
+all     = ["LaplaceX[plot,data,dev,benchmark]"]
 
 [project.urls]
-Homepage       = "https://github.com/YOUR_USERNAME/LaplaceX"
-Documentation  = "https://github.com/YOUR_USERNAME/LaplaceX#readme"
-Repository     = "https://github.com/YOUR_USERNAME/LaplaceX"
-"Bug Tracker"  = "https://github.com/YOUR_USERNAME/LaplaceX/issues"
+Homepage       = "https://github.com/BRUTALLOLOL/LaplaceX"
+Documentation  = "https://github.com/BRUTALLOLOL/LaplaceX#readme"
+Repository     = "https://github.com/BRUTALLOLOL/LaplaceX"
+"Bug Tracker"  = "https://github.com/BRUTALLOLOL/LaplaceX/issues"
 
 # ---------------------------------------------------------------------------
 [tool.scikit-build]

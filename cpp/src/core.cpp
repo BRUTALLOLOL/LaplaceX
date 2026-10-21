@@ -6,6 +6,7 @@
 #include <thread>
 #include <future>
 #include <numeric>
+#include <limits>
 #include <vector>    // already included via core.hpp, but for clarity
 
 namespace laplacex {
@@ -37,14 +38,27 @@ static const double GK_W[15] = {
 
 static const double G7_W[15] = {
      0.4179591836734694,
+     0.0,                 0.0,
      0.3818300505051189,  0.3818300505051189,
+     0.0,                 0.0,
      0.2797053914892767,  0.2797053914892767,
+     0.0,                 0.0,
      0.1294849661688697,  0.1294849661688697,
-     0.0,                 0.0,
-     0.0,                 0.0,
-     0.0,                 0.0,
      0.0,                 0.0
 };
+
+static void validate_config(const TransformConfig& cfg) {
+    if (!std::isfinite(cfg.tol) || cfg.tol <= 0 ||
+        !std::isfinite(cfg.rel_tol) || cfg.rel_tol < 0 ||
+        !std::isfinite(cfg.t_max) || cfg.t_max <= 0 ||
+        cfg.max_levels < 0 || cfg.max_levels > 50)
+        throw std::invalid_argument("Invalid quadrature tolerance, depth or t_max");
+}
+
+static void validate_frequency(std::complex<double> s) {
+    if (!std::isfinite(s.real()) || !std::isfinite(s.imag()) || s.real() < 0)
+        throw std::domain_error("Forward transform requires finite s with Re(s) >= 0");
+}
 
 // Evaluate integrand in [a, b] using G7-K15; return (kronrod, gauss) pair
 static std::pair<std::complex<double>, std::complex<double>>
@@ -57,6 +71,8 @@ gk15(const std::function<std::complex<double>(double)>& g, double a, double b)
     for (int i = 0; i < 15; ++i) {
         double x  = mid + half * GK_NODES[i];
         auto   fx = g(x);
+        if (!std::isfinite(fx.real()) || !std::isfinite(fx.imag()))
+            throw std::domain_error("Non-finite quadrature integrand");
         kron  += GK_W[i] * fx;
         gauss += G7_W[i] * fx;
     }
@@ -75,9 +91,13 @@ static std::complex<double> adaptive_gk(
     double err = std::abs(kron - gauss);
     double ref = std::abs(kron);
 
-    if (depth >= max_depth || err < tol || (ref > 0 && err / ref < rel_tol)) {
+    const double target = std::max(tol, rel_tol * ref);
+    // Do not bisect further when the embedded estimate reaches roundoff.
+    if (err <= target || err <= 32 * std::numeric_limits<double>::epsilon() * ref) {
         return kron;
     }
+    if (depth >= max_depth)
+        throw std::runtime_error("Quadrature did not converge; increase max_levels or relax tol");
 
     double mid = 0.5 * (a + b);
     double t2  = tol * 0.5;
@@ -93,31 +113,41 @@ std::complex<double> forward(
     std::complex<double> s,
     const TransformConfig& cfg)
 {
-    if (std::real(s) < 0.0) {
-        throw std::domain_error(
-            "laplacex::forward requires Re(s) >= 0 for convergence");
-    }
-
-    double sigma  = std::real(s);
+    validate_config(cfg);
+    validate_frequency(s);
     double s_abs  = std::abs(s);
-    double center = (s_abs > 0) ? 1.0 / s_abs : 1.0;
+    double center = std::min((s_abs > 0) ? 1.0 / s_abs : 1.0, cfg.t_max);
 
     std::vector<double> breaks;
-    breaks.push_back(1e-15);
-    for (double x = 1e-6; x < center; x *= 4.0)  breaks.push_back(x);
+    breaks.push_back(0.0);
+    for (double x = std::min(1e-6, center * 0.25); x > 0 && x < center; x *= 4.0)
+        breaks.push_back(x);
     breaks.push_back(center);
     for (double x = center * 4.0; x < cfg.t_max; x *= 4.0) breaks.push_back(x);
     breaks.push_back(cfg.t_max);
     std::sort(breaks.begin(), breaks.end());
     breaks.erase(std::unique(breaks.begin(), breaks.end()), breaks.end());
 
-    std::complex<double> result{};
+    std::complex<double> result{}, correction{};
+    const double local_tol = cfg.tol / (breaks.size() - 1);
     for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
         double a = breaks[i], b = breaks[i + 1];
         auto g = [&](double t) -> std::complex<double> {
             return f(t) * std::exp(-s * t);
         };
-        result += adaptive_gk(g, a, b, cfg.tol, cfg.rel_tol, 0, cfg.max_levels);
+        std::complex<double> value;
+        if (a == 0.0) {
+            // t=u^2 removes the common integrable 1/sqrt(t) endpoint singularity.
+            auto endpoint = [&](double u) { return g(u * u) * (2 * u); };
+            value = adaptive_gk(endpoint, 0, std::sqrt(b), local_tol,
+                                cfg.rel_tol, 0, cfg.max_levels);
+        } else {
+            value = adaptive_gk(g, a, b, local_tol, cfg.rel_tol, 0, cfg.max_levels);
+        }
+        auto adjusted = value - correction;
+        auto next = result + adjusted;
+        correction = (next - result) - adjusted;
+        result = next;
     }
     return result;
 }
@@ -160,8 +190,15 @@ struct CubicSpline {
     std::vector<double> t, a, b, c, d;
 
     CubicSpline(const std::vector<double>& x, const std::vector<double>& y) {
+        if (x.size() != y.size())
+            throw std::invalid_argument("t and f must have equal lengths");
         int n = static_cast<int>(x.size()) - 1;
         if (n < 1) throw std::invalid_argument("Need at least 2 points");
+        for (std::size_t i = 0; i < x.size(); ++i) {
+            if (!std::isfinite(x[i]) || !std::isfinite(y[i]) || x[i] < 0 ||
+                (i && x[i] <= x[i-1]))
+                throw std::invalid_argument("Need finite samples with strictly increasing t >= 0");
+        }
 
         t = x; a = y;
         std::vector<double> h(n), alpha(n), l(n+1), mu(n+1), z(n+1);
@@ -187,8 +224,7 @@ struct CubicSpline {
 
     double eval(double x) const {
         int n = static_cast<int>(t.size()) - 1;
-        if (x <= t.front()) return a.front();
-        if (x >= t.back())  return a.back();
+        if (x > t.back()) return 0.0;
         int lo = 0, hi = n - 1;
         while (lo < hi) { int mid = (lo+hi)/2; if (t[mid+1] < x) lo=mid+1; else hi=mid; }
         double dx = x - t[lo];
@@ -205,68 +241,116 @@ std::vector<std::complex<double>> forward_discrete(
     const std::vector<std::complex<double>>& s_vals,
     const TransformConfig& cfg)
 {
+    validate_config(cfg);
     CubicSpline spline(t, f);
-    auto interp = [&](double x) { return spline.eval(x); };
-    return forward_batch(interp, s_vals, cfg);
+    std::vector<std::complex<double>> out;
+    out.reserve(s_vals.size());
+    // Respect every spline knot: global adaptive sampling can miss narrow features.
+    for (auto s : s_vals) {
+        validate_frequency(s);
+        auto g = [&](double x) { return spline.eval(x) * std::exp(-s * x); };
+        std::complex<double> sum{}, correction{};
+        double left = 0.0;
+        for (double knot : t) {
+            const double right = std::min(knot, cfg.t_max);
+            if (right > left) {
+                auto value = adaptive_gk(g, left, right, cfg.tol / t.size(),
+                                         cfg.rel_tol, 0, cfg.max_levels);
+                auto adjusted = value - correction;
+                auto next = sum + adjusted;
+                correction = (next - sum) - adjusted;
+                sum = next;
+            }
+            left = right;
+            if (knot >= cfg.t_max) break;
+        }
+        out.push_back(sum);
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------------------
-// Inverse – Stehfest algorithm (replaces the original flawed Weeks method)
+// Inverse: Weeks-Laguerre expansion, with midpoint Fourier coefficients.
+// See Abate, Choudhury & Whitt (1996), DOI 10.1287/ijoc.8.4.413.
 // ---------------------------------------------------------------------------
 std::vector<double> inverse_weeks(
     const std::function<std::complex<double>(std::complex<double>)>& F,
     const std::vector<double>& t_eval,
-    double /*sigma*/, double /*b*/, int N,
-    const TransformConfig& /*cfg*/)
+    double sigma, double b, int N,
+    const TransformConfig& cfg)
 {
-    // Cap N to avoid catastrophic cancellation (weights explode for N > ~20)
-    constexpr int N_MAX = 18;
-    int N_use = std::min(N, N_MAX);
-    if (N_use % 2 != 0) N_use++;   // must be even
-
-    // Pre‑compute log factorials up to 2*N_use
-    std::vector<double> log_fact(2 * N_use + 1, 0.0);
-    for (int i = 2; i <= 2 * N_use; ++i)
-        log_fact[i] = log_fact[i-1] + std::log(static_cast<double>(i));
-
-    const int M = N_use / 2;
-    const double LN2 = std::log(2.0);
-
-    // Compute Stehfest weights V_k (k = 1 … N_use) in log‑space
-    std::vector<double> V(N_use + 1, 0.0);  // index 1..N_use
-    for (int k = 1; k <= N_use; ++k) {
-        double sum_pos = 0.0;               // positive part
-        int j_start = (k + 1) / 2;
-        int j_end   = std::min(k, M);
-
-        for (int j = j_start; j <= j_end; ++j) {
-            // log term = M * log(j) + log((2j)!) - [log((M-j)!) + log(j!) + log((j-1)!) + log((k-j)!) + log((2j-k)!)]
-            double log_term = M * std::log(static_cast<double>(j))
-                            + log_fact[2*j]
-                            - (log_fact[M - j] + log_fact[j] + log_fact[j-1] + log_fact[k - j] + log_fact[2*j - k]);
-            sum_pos += std::exp(log_term);
+    validate_config(cfg);
+    if (N < 2 || N > 4096 || !std::isfinite(sigma) ||
+        !std::isfinite(b) || b < 0)
+        throw std::invalid_argument("Weeks requires 2 <= N <= 4096, finite sigma, and b >= 0");
+    for (double t : t_eval)
+        if (!std::isfinite(t) || t < 0)
+            throw std::invalid_argument("Inverse evaluation times must be finite and nonnegative");
+    if (t_eval.empty()) return {};
+    const double tmax = std::max(1e-12, *std::max_element(t_eval.begin(), t_eval.end()));
+    if (sigma == 0) sigma = 4.0 / tmax;
+    const int samples = 4 * N;
+    const double pi = std::acos(-1.0);
+    std::vector<double> coefficients;
+    double best_score = std::numeric_limits<double>::infinity();
+    double best_b = b;
+    const bool auto_b = b == 0;
+    // Tail minimisation chooses a useful scale for both decays and oscillations.
+    // Coefficients are computed once per candidate and shared by all times.
+    for (int candidate = 0; candidate < (auto_b ? 17 : 1); ++candidate) {
+        double scale = auto_b ? std::pow(2.0, -1.0 + candidate * 0.5) / tmax : b;
+        std::vector<long double> sums(N, 0.0L);
+        for (int j = 0; j < samples; ++j) {
+            double theta = 2 * pi * (j + 0.5) / samples;
+            std::complex<double> z = std::polar(1.0, theta);
+            auto one_minus_z = 1.0 - z;
+            // Cotangent form keeps the contour's real part exactly sigma.
+            auto value = F({sigma, scale / std::tan(theta * 0.5)});
+            if (!std::isfinite(value.real()) || !std::isfinite(value.imag()))
+                throw std::domain_error("Non-finite Laplace image on the Weeks contour");
+            auto g = 2.0 * scale / one_minus_z * value;
+            std::complex<double> phase(1.0, 0.0);
+            auto step = std::conj(z);
+            for (int k = 0; k < N; ++k) {
+                sums[k] += (g * phase).real();
+                phase *= step;
+            }
         }
-        // Apply sign factor: V_k = (-1)^{k + M} * sum_pos
-        if ((k + M) % 2 != 0) sum_pos = -sum_pos;
-        V[k] = sum_pos;
+        std::vector<double> a(N);
+        double tail = 0, norm = 0;
+        for (int k = 0; k < N; ++k) {
+            a[k] = static_cast<double>(sums[k] / samples);
+            norm += std::abs(a[k]);
+            if (k >= 3 * N / 4) tail += std::abs(a[k]);
+        }
+        // Relative tail size prevents an under-resolved, low-amplitude expansion
+        // from winning solely because it misses most of an oscillatory signal.
+        const double roundoff = 32 * std::numeric_limits<double>::epsilon();
+        double score = norm > 0 ? tail / norm + roundoff : 0;
+        if (score < best_score) {
+            best_score = score;
+            coefficients = std::move(a);
+            best_b = scale;
+        }
+        if (tail + roundoff * norm <
+            cfg.tol * std::exp(-std::max(0.0, sigma * tmax)) * 0.25) break;
     }
-
-    // Evaluate f(t) for each requested t
     std::vector<double> out(t_eval.size());
     for (std::size_t i = 0; i < t_eval.size(); ++i) {
-        double t = t_eval[i];
-        if (t <= 0.0) {
-            out[i] = 0.0;   // or throw – t must be positive
-            continue;
+        // Scaled Laguerre recurrence avoids separately overflowing L_n(2bt).
+        const long double x = 2.0L * best_b * t_eval[i];
+        long double prev = std::exp((sigma - best_b) * t_eval[i]);
+        long double curr = (1.0L - x) * prev;
+        long double sum = coefficients[0] * prev + coefficients[1] * curr;
+        for (int k = 1; k < N - 1; ++k) {
+            long double next = ((2 * k + 1 - x) * curr - k * prev) / (k + 1);
+            sum += coefficients[k+1] * next;
+            prev = curr;
+            curr = next;
         }
-        double sum = 0.0;
-        for (int k = 1; k <= N_use; ++k) {
-            double s_k = k * LN2 / t;
-            auto F_val = F(s_k);
-            double realF = std::real(F_val);    // Stehfest assumes real‑valued F on the positive real axis
-            sum += V[k] * realF;
-        }
-        out[i] = (LN2 / t) * sum;
+        out[i] = static_cast<double>(sum);
+        if (!std::isfinite(out[i]))
+            throw std::overflow_error("Weeks reconstruction overflow; adjust sigma and b");
     }
     return out;
 }

@@ -50,7 +50,8 @@ std::vector<std::complex<double>> forward_batch(
 
 /**
  * Forward transform from discrete samples (t_i, f_i).
- * Internally constructs a cubic-spline interpolant.
+ * Integrates a natural cubic spline to min(t.back(), cfg.t_max). The first
+ * segment is extrapolated to zero; there is no continuation beyond the last sample.
  */
 std::vector<std::complex<double>> forward_discrete(
     const std::vector<double>& t,

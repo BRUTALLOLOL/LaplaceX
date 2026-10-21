@@ -1,0 +1,75 @@
+{
+  "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "numpy": "2.5.3",
+  "module": "C:\\Users\\ARTEM\\Desktop\\myprojects\\LaplaceX\\src\\laplacex\\__init__.py",
+  "reference_precision_digits": 60,
+  "results": {
+    "forward_exp": {
+      "max_abs_error": 7.083111960945378e-16,
+      "normalized_max_error": 1.4874535117985296e-15,
+      "seconds": 0.0009121000184677541,
+      "callback_evaluations": 1695
+    },
+    "forward_fast_decay": {
+      "max_abs_error": 1.0097419586828951e-28,
+      "normalized_max_error": 2.0194839173657902e-16,
+      "seconds": 0.00018140004249289632
+    },
+    "forward_diffusion": {
+      "max_abs_error": 2.220446049250313e-16,
+      "normalized_max_error": 1.7716596207925437e-16,
+      "seconds": 0.00020439998479560018
+    },
+    "sampled_exp": {
+      "max_abs_error": 2.236404939015557e-08,
+      "normalized_max_error": 2.460045432917113e-08,
+      "seconds": 0.007087300007697195
+    },
+    "inverse_exp": {
+      "max_abs_error": 1.6085901057352747e-14,
+      "normalized_max_error": 1.964736391894224e-14,
+      "seconds": 0.0016542000230401754
+    },
+    "inverse_step": {
+      "max_abs_error": 3.397282455352979e-14,
+      "normalized_max_error": 3.397282455352979e-14,
+      "seconds": 0.0007394000422209501
+    },
+    "inverse_ramp": {
+      "max_abs_error": 1.0658141036401503e-14,
+      "normalized_max_error": 2.1316282072803005e-15,
+      "seconds": 0.0007673000218346715
+    },
+    "inverse_damped_cos": {
+      "max_abs_error": 3.288307126592116e-12,
+      "normalized_max_error": 3.61851795418973e-12,
+      "seconds": 0.004282200010493398
+    },
+    "inverse_sine_N256": {
+      "max_abs_error": 3.537579895684928e-09,
+      "normalized_max_error": 3.5376831128824607e-09,
+      "seconds": 0.026049400039482862
+    },
+    "inverse_sine_N64": {
+      "max_abs_error": 0.06159326478660632,
+      "normalized_max_error": 0.061595061914689817,
+      "seconds": 0.0030630999826826155
+    },
+    "oscillatory_component_image": {
+      "max_abs_error": 2.7755575615628914e-17,
+      "normalized_max_error": 8.813997778052988e-17,
+      "seconds": 3.809999907389283e-05
+    },
+    "decompose_single": {
+      "max_abs_error": 7.260858581048524e-14,
+      "normalized_max_error": 4.938358436086982e-14,
+      "seconds": 0.025468299980275333
+    },
+    "decompose_two": {
+      "max_abs_error": 3.3586466940960236e-12,
+      "normalized_max_error": 1.3547126780523862e-12,
+      "seconds": 0.3141528000123799
+    }
+  }
+}

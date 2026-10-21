@@ -24,7 +24,7 @@ struct ExponentialComponent {
     double decay_time  = 0.0;  ///< 1 / lambda_k  (relaxation time)
     double frequency   = 0.0;  ///< omega_k (0 for purely real modes)
     double phase       = 0.0;  ///< phi_k
-    double significance = 0.0; ///< relative energy of this component (0–1)
+    double significance = 0.0; ///< normalized absolute amplitude (0–1)
     double log_time    = 0.0;  ///< x_k = ln(t_k) – position in log plane
 };
 
@@ -34,37 +34,36 @@ struct ExponentialComponent {
 
 struct DecomposeConfig {
     // Wavelet
-    std::string wavelet    = "mexh";  ///< "mexh" | "cgauss" (complex Gaussian)
-    int    n_scales        = 64;      ///< number of dyadic scales
-    double scale_min       = 0.5;     ///< smallest wavelet scale (log-space units)
-    double scale_max       = 4.0;     ///< largest  wavelet scale (log-space units)
+    std::string wavelet    = "mexh";  ///< only Mexican Hat is implemented
+    int    n_scales        = 16;      ///< number of logarithmically spaced scales
+    double scale_min       = 0.05;    ///< smallest wavelet scale (log-space units)
+    double scale_max       = 0.5;     ///< largest  wavelet scale (log-space units)
 
     // Log-space resampling
-    int    n_log_points    = 512;     ///< uniform grid size in x = ln(t)
+    int    n_log_points    = 256;     ///< uniform grid size in x = ln(t)
 
     // Skeleton / ridge tracking
     double ridge_threshold = 0.05;   ///< min |W| / max|W| to keep a ridge line
     int    min_ridge_len   = 4;      ///< minimum ridge length (in scale steps)
 
     // Noise & filtering
-    double noise_sigma     = -1.0;   ///< <0 → auto-estimated from finest scales
+    double noise_sigma     = -1.0;   ///< <0 → MAD estimate from local interpolation residuals
     double snr_threshold   = 3.0;    ///< min amplitude / noise to keep component
 
     // Model selection
-    bool   use_aic         = true;   ///< use AIC to prune over-fitted models
+    bool   use_aic         = true;   ///< legacy enable switch for information-criterion pruning
+    std::string model_selection = "bic"; ///< "bic" (parsimonious) or "aicc"
 
     // Advanced
-    /// If true, skip the ALS rate-refinement step inside decompose().
-    /// Useful when calling from decompose_deflate(): the CWT-ridge rate is less
-    /// biased than a single-component ALS fit to a multi-component signal, so
-    /// using it for each deflation subtraction produces a cleaner residual.
-    /// Joint ALS is still applied once at the end of decompose_deflate().
+    /// Legacy name: skip joint nonlinear rate/amplitude refinement.
+    /// Linear amplitudes are still fitted by QR; raw ridge rates are approximate.
     bool   disable_als     = false;
 };
 
 /**
- * Decompose a time-series into a sum of exponential (+ oscillatory) components
- * by operating in the logarithmic time plane with a continuous wavelet transform.
+ * Fit a real sum of decaying exponentials, with signed amplitudes allowed.
+ * Mexican-Hat zero crossings initialize a joint QR/LM fit in log time.
+ * This routine does not estimate oscillation frequencies.
  *
  * @param t       Strictly increasing time values (t > 0)
  * @param f       Signal values at t
@@ -74,23 +73,20 @@ struct DecomposeConfig {
 std::vector<ExponentialComponent> decompose(
     const std::vector<double>& t,
     const std::vector<double>& f,
-    const DecomposeConfig& cfg = {}
+    const DecomposeConfig& cfg = {},
+    int max_components = 5
 );
 
 /**
- * Decompose using iterative deflation: repeatedly extracts the dominant mode
- * from the residual, then jointly refines all found components via ALS.
- *
- * This overcomes the single-pass CWT limitation of missing weak components
- * when their amplitude ratio exceeds ~4:1 relative to a dominant mode.
+ * Fit using log-spaced rate-grid proposals instead of wavelet proposals.
+ * Shares the same joint QR/LM optimizer, noise tests and model selection.
  *
  * @param t              Strictly increasing time values (t > 0)
  * @param f              Signal values at t
- * @param cfg            Decomposition configuration (thresholds are internally
- *                       relaxed for residual detection)
+ * @param cfg            Decomposition configuration
  * @param max_components Maximum number of components to extract (default 5)
- * @param energy_tol     Stop when residual energy < energy_tol * original_energy
- *                       (default 1e-6)
+ * @param energy_tol     Relative residual stopping target when model selection
+ *                       is disabled (default 1e-6)
  * @return               Sorted (by significance, descending) list of components
  */
 std::vector<ExponentialComponent> decompose_deflate(

@@ -1,10 +1,12 @@
 #include "laplacex/utils.hpp"
+#include "laplacex/validation.hpp"
 
 #include <cmath>
 #include <algorithm>
 #include <numeric>
 #include <stdexcept>
 #include <random>
+#include <limits>
 
 namespace laplacex {
 namespace utils {
@@ -17,8 +19,8 @@ std::pair<std::vector<double>, std::vector<double>> to_log_plane(
     const std::vector<double>& f,
     int n)
 {
-    if (t.empty() || t.size() != f.size())
-        throw std::invalid_argument("to_log_plane: t and f must be non-empty and same size");
+    validate_samples(t, f, 2);
+    if (n < 2) throw std::invalid_argument("Log grid needs at least 2 points");
 
     double x_min = std::log(t.front());
     double x_max = std::log(t.back());
@@ -50,13 +52,15 @@ std::pair<double, double> suggest_log_range(
     const std::vector<double>& t,
     const std::vector<double>& f)
 {
-    if (t.empty()) throw std::invalid_argument("suggest_log_range: empty input");
+    validate_samples(t, f, 2);
 
     // Find where signal is above 1% of its maximum
-    double f_max = *std::max_element(f.begin(), f.end());
+    double f_max = 0;
+    for (double v : f) f_max = std::max(f_max, std::abs(v));
     double thr   = 0.01 * f_max;
 
     double t_lo = t.back(), t_hi = t.front();
+    if (f_max == 0) return {t.front() * 0.1, t.back() * 10.0};
     for (std::size_t i = 0; i < t.size(); ++i) {
         if (std::abs(f[i]) > thr) {
             t_lo = std::min(t_lo, t[i]);
@@ -71,12 +75,16 @@ std::pair<double, double> suggest_log_range(
 // Information criteria
 // ---------------------------------------------------------------------------
 double aic(double rss, int n, int k) {
-    if (rss <= 0 || n <= 0) return 1e30;
+    if (!std::isfinite(rss) || rss < 0 || n <= 0 || k < 0)
+        throw std::invalid_argument("AIC requires finite rss >= 0, n > 0 and k >= 0");
+    if (rss == 0) return -std::numeric_limits<double>::infinity();
     return n * std::log(rss / n) + 2.0 * k;
 }
 
 double bic(double rss, int n, int k) {
-    if (rss <= 0 || n <= 0) return 1e30;
+    if (!std::isfinite(rss) || rss < 0 || n <= 0 || k < 0)
+        throw std::invalid_argument("BIC requires finite rss >= 0, n > 0 and k >= 0");
+    if (rss == 0) return -std::numeric_limits<double>::infinity();
     return n * std::log(rss / n) + k * std::log(n);
 }
 
@@ -158,6 +166,8 @@ std::vector<double> gen_diffusion(
 std::vector<double> add_noise(
     const std::vector<double>& f, double sigma, int seed)
 {
+    if (!std::isfinite(sigma) || sigma < 0)
+        throw std::invalid_argument("Noise sigma must be finite and nonnegative");
     std::mt19937 rng((seed < 0) ? std::random_device{}() : static_cast<unsigned>(seed));
     std::normal_distribution<double> dist(0.0, sigma);
 

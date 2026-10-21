@@ -1,8 +1,8 @@
 """
 LaplaceX
 ========
-Industrial-grade Laplace transform library operating in the logarithmic
-time plane for superior numerical stability.
+Numerical forward and inverse Laplace transforms, with exponential
+decomposition initialized by wavelet analysis in logarithmic time.
 
 Author : Vozmishchev Artem
 License: MIT
@@ -10,7 +10,7 @@ License: MIT
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 __author__  = "Vozmishchev Artem"
 
 # ---------------------------------------------------------------------------

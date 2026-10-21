@@ -18,7 +18,7 @@ import pytest
 # We import the *installed* package.  If you are running from source without
 # building the extension, these will fail gracefully with ImportError.
 # ---------------------------------------------------------------------------
-laplacex = pytest.importorskip("laplacex")
+import laplacex
 
 from laplacex import (              # noqa: E402
     laplace,

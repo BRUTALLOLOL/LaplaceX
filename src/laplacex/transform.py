@@ -11,18 +11,7 @@ from __future__ import annotations
 from typing import Callable, Optional, Union
 import numpy as np
 
-from laplacex._laplacex import (
-    TransformConfig,
-    DecomposeConfig,
-    ExponentialComponent,
-    forward          as _fwd,
-    forward_batch    as _fwd_batch,
-    forward_discrete as _fwd_disc,
-    inverse_weeks    as _inv_weeks,
-    decompose        as _decompose,
-    reconstruct      as _reconstruct,
-    reconstruct_laplace as _reconstruct_laplace,
-)
+from laplacex._laplacex import DecomposeConfig, TransformConfig
 from laplacex.components import ExponentialComponents
 
 
@@ -122,30 +111,16 @@ class LaplaceTransform:
         complex or ndarray of complex
             F(s) at the requested frequencies.
         """
-        scalar_s = np.isscalar(s) or (hasattr(s, 'shape') and s.shape == ())
+        from laplacex.api import laplace
 
-        if callable(f):
-            s_arr = np.atleast_1d(np.asarray(s, dtype=complex))
-            result = _fwd_batch(f, s_arr, self._cfg)
-            return complex(result[0]) if scalar_s else np.array(result)
-        else:
-            # Discrete samples
-            if t is None:
-                raise ValueError(
-                    "When `f` is an array, `t` (time points) must be provided."
-                )
-            t_arr = np.asarray(t, dtype=float)
-            f_arr = np.asarray(f, dtype=float)
-            s_arr = np.atleast_1d(np.asarray(s, dtype=complex))
-            result = _fwd_disc(t_arr, f_arr, s_arr, self._cfg)
-            return complex(result[0]) if scalar_s else np.array(result)
+        return laplace(f, s, t=t, cfg=self._cfg)
 
     # ------------------------------------------------------------------
     # Inverse transform
     # ------------------------------------------------------------------
     def inverse(
         self,
-        F: Callable[[complex], complex],
+        F: Optional[Callable[[complex], complex]],
         t_eval: np.ndarray,
         *,
         sigma: float = 0.0,
@@ -164,7 +139,7 @@ class LaplaceTransform:
         sigma, b : float
             Weeks-method parameters (auto-selected when zero).
         method : {"auto", "weeks", "components"}
-            "auto"       → use cached components if available, else Weeks.
+            "auto"       → use cached components when F is None, else Weeks.
             "weeks"      → always use the Weeks–Laguerre method.
             "components" → always use the cached component representation
                            (raises if no components are cached).
@@ -175,20 +150,21 @@ class LaplaceTransform:
             f(t) at the requested time points.
         """
         t_arr = np.asarray(t_eval, dtype=float)
+        if method not in {"auto", "weeks", "components"}:
+            raise ValueError("method must be 'auto', 'weeks', or 'components'")
 
-        if method == "components" or (method == "auto" and self._components is not None):
+        if method == "components" or (
+            method == "auto" and F is None and self._components is not None
+        ):
             if self._components is None:
                 raise RuntimeError(
                     "No cached components — run decompose() first, or use method='weeks'."
                 )
-            return np.asarray(
-                _reconstruct(self._components._comps, t_arr)
-            )
+            return self._components.reconstruct(t_arr)
 
-        # Weeks fallback
-        return np.asarray(
-            _inv_weeks(F, t_arr, sigma, b, self._weeks_N, self._cfg)
-        )
+        from laplacex.api import inverse
+
+        return inverse(F, t_arr, sigma=sigma, b=b, N=self._weeks_N, cfg=self._cfg)
 
     # ------------------------------------------------------------------
     # Decompose
@@ -219,8 +195,9 @@ class LaplaceTransform:
         """
         t_arr = np.asarray(t, dtype=float)
         f_arr = np.asarray(f, dtype=float)
-        comps = _decompose(t_arr, f_arr, self._dcfg)
-        ec = ExponentialComponents(comps)
+        from laplacex.api import decompose
+
+        ec = decompose(t_arr, f_arr, cfg=self._dcfg)
         if cache:
             self._components = ec
         return ec
@@ -245,8 +222,7 @@ class LaplaceTransform:
         -------
         ndarray of float
         """
-        t_arr = np.asarray(t_eval, dtype=float)
-        return np.asarray(_reconstruct(components._comps, t_arr))
+        return components.reconstruct(t_eval)
 
     # ------------------------------------------------------------------
     # Dunder

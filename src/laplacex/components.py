@@ -88,7 +88,7 @@ class ExponentialComponents:
 
     @property
     def significances(self) -> np.ndarray:
-        """Relative energy of each component (sums to ≈ 1)."""
+        """Relative absolute amplitudes of components (sums to approximately 1)."""
         return np.array([c.significance for c in self._comps])
 
     @property
@@ -160,7 +160,7 @@ class ExponentialComponents:
         ndarray of float
         """
         t_arr = np.asarray(t_eval, dtype=float)
-        return np.asarray(_reconstruct(self._comps, t_arr))
+        return np.asarray(_reconstruct(self._comps, t_arr.reshape(-1))).reshape(t_arr.shape)
 
     def reconstruct_laplace(self, s_eval: np.ndarray) -> np.ndarray:
         """
@@ -175,7 +175,9 @@ class ExponentialComponents:
         ndarray of complex
         """
         s_arr = np.asarray(s_eval, dtype=complex)
-        return np.asarray(_reconstruct_laplace(self._comps, s_arr))
+        return np.asarray(_reconstruct_laplace(self._comps, s_arr.reshape(-1))).reshape(
+            s_arr.shape
+        )
 
     # ------------------------------------------------------------------
     # Export

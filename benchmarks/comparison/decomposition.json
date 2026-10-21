@@ -1,0 +1,3242 @@
+{
+  "metadata": {
+    "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "mpmath": "1.3.0",
+    "laplacex": "1.0.0",
+    "laplacex_module": "C:\\Users\\ARTEM\\Desktop\\myprojects\\LaplaceX\\.venv\\Lib\\site-packages\\laplacex\\__init__.py",
+    "extension_sha256": "09169796e43cab01228b43dbc89c7c428c1d1a9f146d06c629397340a6f99982",
+    "script_sha256": "e7b8e66bb68fae5869ef466be633cb0bb8585dc1828d8ad24ec38cbe52c0f75a",
+    "repeats": 5,
+    "points": 64,
+    "timing": "one warmup, randomized round robin, median; setup included; one BLAS thread",
+    "reference": "analytic closed forms, inverse evaluated at 60 dps then rounded to float64",
+    "transform_target": "all points abs(error) <= 1e-10 + 1e-8*abs(reference)",
+    "fine_wavelet_config": {
+      "scale_min": 0.05,
+      "scale_max": 0.5,
+      "n_scales": 32,
+      "min_ridge_len": 3
+    },
+    "default_wavelet_config": {
+      "scale_min": 0.05,
+      "scale_max": 0.5,
+      "n_scales": 16,
+      "n_log_points": 256,
+      "model_selection": "bic"
+    },
+    "scipy_model_selection": "TRF/LM BIC compare all K=1..5 unless the common 1e-28 energy floor is reached",
+    "ablation": "native.decompose_deflate uses rate-grid seeds and the same joint QR/LM optimizer as log-CWT"
+  },
+  "results": {
+    "single_uniform": {
+      "time_min": 0.01,
+      "time_max": 15.0,
+      "samples": 600,
+      "rates": [
+        2
+      ],
+      "amplitudes": [
+        1.5
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 3.3306690738754696e-16,
+          "normalized_max_error": 2.2653020349022857e-16,
+          "rmse": 3.22760483376889e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.6595503305017398e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.0004260000423528254,
+            0.00040520000038668513,
+            0.0003621999640017748,
+            0.0003692999598570168,
+            0.00037349999183788896
+          ],
+          "median_seconds": 0.00037349999183788896,
+          "min_seconds": 0.0003621999640017748,
+          "max_seconds": 0.0004260000423528254
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 3.3306690738754696e-16,
+          "normalized_max_error": 2.2653020349022857e-16,
+          "rmse": 3.22760483376889e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.6595503305017398e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.00039309996645897627,
+            0.0003863999736495316,
+            0.00035339995520189404,
+            0.000401899975258857,
+            0.0003550999681465328
+          ],
+          "median_seconds": 0.0003863999736495316,
+          "min_seconds": 0.00035339995520189404,
+          "max_seconds": 0.000401899975258857
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 3.3306690738754696e-16,
+          "normalized_max_error": 2.2653020349022857e-16,
+          "rmse": 3.22760483376889e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.6595503305017398e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.00020290003158152103,
+            0.0002655000425875187,
+            0.0001846000086516142,
+            0.00019950000569224358,
+            0.00019719998817890882
+          ],
+          "median_seconds": 0.00019950000569224358,
+          "min_seconds": 0.0001846000086516142,
+          "max_seconds": 0.0002655000425875187
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 3.3306690738754696e-16,
+          "normalized_max_error": 2.2653020349022857e-16,
+          "rmse": 3.22760483376889e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.6595503305017398e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.000172699976246804,
+            0.00019669998437166214,
+            0.00018279999494552612,
+            0.00017220003064721823,
+            0.00019189994782209396
+          ],
+          "median_seconds": 0.00018279999494552612,
+          "min_seconds": 0.00017220003064721823,
+          "max_seconds": 0.00019669998437166214
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 2.220446049250313e-16,
+          "normalized_max_error": 1.5102013566015237e-16,
+          "rmse": 2.5147095963759548e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 17,
+          "training_relative_l2": 1.2929981694532425e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.005376899964176118,
+            0.004793700005393475,
+            0.004551000020001084,
+            0.005752900033257902,
+            0.005080300034023821
+          ],
+          "median_seconds": 0.005080300034023821,
+          "min_seconds": 0.004551000020001084,
+          "max_seconds": 0.005752900033257902
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 2.220446049250313e-16,
+          "normalized_max_error": 1.5102013566015237e-16,
+          "rmse": 2.5147095963759548e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 17,
+          "training_relative_l2": 1.2929981694532425e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.004690500034485012,
+            0.005270999972708523,
+            0.004456499998923391,
+            0.005171100026927888,
+            0.004665199958253652
+          ],
+          "median_seconds": 0.004690500034485012,
+          "min_seconds": 0.004456499998923391,
+          "max_seconds": 0.005270999972708523
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 2.220446049250313e-16,
+          "normalized_max_error": 1.5102013566015237e-16,
+          "rmse": 2.5147095963759548e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 17,
+          "training_relative_l2": 1.2929981694532425e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.004996599978767335,
+            0.005343400000128895,
+            0.0051460000104270875,
+            0.004455799993593246,
+            0.004698499978985637
+          ],
+          "median_seconds": 0.004996599978767335,
+          "min_seconds": 0.004455799993593246,
+          "max_seconds": 0.005343400000128895
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 2.220446049250313e-16,
+          "normalized_max_error": 1.5102013566015237e-16,
+          "rmse": 2.5147095963759548e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 19,
+          "training_relative_l2": 1.2929981694532425e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.0023683999897912145,
+            0.0019849000382237136,
+            0.0020172999938949943,
+            0.0019906999659724534,
+            0.0020112000056542456
+          ],
+          "median_seconds": 0.0020112000056542456,
+          "min_seconds": 0.0019849000382237136,
+          "max_seconds": 0.0023683999897912145
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 2.220446049250313e-16,
+          "normalized_max_error": 1.5102013566015237e-16,
+          "rmse": 2.5147095963759548e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 19,
+          "training_relative_l2": 1.2929981694532425e-16,
+          "rates": [
+            2.0
+          ],
+          "component_count": 1,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.002046499983407557,
+            0.0018991000251844525,
+            0.0020120000117458403,
+            0.0019043000065721571,
+            0.0020673999679274857
+          ],
+          "median_seconds": 0.0020120000117458403,
+          "min_seconds": 0.0018991000251844525,
+          "max_seconds": 0.0020673999679274857
+        }
+      }
+    },
+    "two_uniform": {
+      "time_min": 0.01,
+      "time_max": 15.0,
+      "samples": 600,
+      "rates": [
+        0.3,
+        3.0
+      ],
+      "amplitudes": [
+        2,
+        0.5
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 6.661338147750939e-16,
+          "normalized_max_error": 2.6868557676564582e-16,
+          "rmse": 1.3711457439339406e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.9625610232497047e-16,
+          "rates": [
+            0.3,
+            3.0000000000000013
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 4.440892098500626e-16,
+          "timings_seconds": [
+            0.0030812000040896237,
+            0.0025052999844774604,
+            0.002413300040643662,
+            0.0025547000113874674,
+            0.0024634000146761537
+          ],
+          "median_seconds": 0.0025052999844774604,
+          "min_seconds": 0.002413300040643662,
+          "max_seconds": 0.0030812000040896237
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 6.661338147750939e-16,
+          "normalized_max_error": 2.6868557676564582e-16,
+          "rmse": 1.3711457439339406e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.9625610232497047e-16,
+          "rates": [
+            0.3,
+            3.0000000000000013
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 4.440892098500626e-16,
+          "timings_seconds": [
+            0.0032638999982737005,
+            0.0032223000307567418,
+            0.003083399962633848,
+            0.0031707000453025103,
+            0.0038985999999567866
+          ],
+          "median_seconds": 0.0032223000307567418,
+          "min_seconds": 0.003083399962633848,
+          "max_seconds": 0.0038985999999567866
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 6.661338147750939e-16,
+          "normalized_max_error": 2.6868557676564582e-16,
+          "rmse": 1.3711457439339406e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.9625610232497047e-16,
+          "rates": [
+            0.3,
+            3.0000000000000013
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 4.440892098500626e-16,
+          "timings_seconds": [
+            0.0034044000203721225,
+            0.0029596000094898045,
+            0.003020100004505366,
+            0.002971600042656064,
+            0.0030156999710015953
+          ],
+          "median_seconds": 0.0030156999710015953,
+          "min_seconds": 0.0029596000094898045,
+          "max_seconds": 0.0034044000203721225
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7912371784376387e-16,
+          "rmse": 4.0479194004679205e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 5.793905480698044e-17,
+          "rates": [
+            0.3,
+            3.0000000000000004
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.220446049250313e-16,
+          "timings_seconds": [
+            0.003741899970918894,
+            0.0037900000461377203,
+            0.003768599999602884,
+            0.0038432999863289297,
+            0.0036096000112593174
+          ],
+          "median_seconds": 0.003768599999602884,
+          "min_seconds": 0.0036096000112593174,
+          "max_seconds": 0.0038432999863289297
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7912371784376387e-16,
+          "rmse": 6.469223981818817e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 34,
+          "training_relative_l2": 9.25958957576836e-17,
+          "rates": [
+            0.3,
+            2.9999999999999996
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-16,
+          "timings_seconds": [
+            0.012207899999339134,
+            0.011280299979262054,
+            0.012012199964374304,
+            0.011983599979430437,
+            0.011645499966107309
+          ],
+          "median_seconds": 0.011983599979430437,
+          "min_seconds": 0.011280299979262054,
+          "max_seconds": 0.012207899999339134
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7912371784376387e-16,
+          "rmse": 6.469223981818817e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 17,
+          "training_relative_l2": 9.25958957576836e-17,
+          "rates": [
+            0.3,
+            2.9999999999999996
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-16,
+          "timings_seconds": [
+            0.006466000049840659,
+            0.005986400006804615,
+            0.010129600006621331,
+            0.006129100045654923,
+            0.005870299995876849
+          ],
+          "median_seconds": 0.006129100045654923,
+          "min_seconds": 0.005870299995876849,
+          "max_seconds": 0.010129600006621331
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7912371784376387e-16,
+          "rmse": 6.469223981818817e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 34,
+          "training_relative_l2": 9.25958957576836e-17,
+          "rates": [
+            0.3,
+            2.9999999999999996
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-16,
+          "timings_seconds": [
+            0.011011700029484928,
+            0.012422200001310557,
+            0.014104600006248802,
+            0.012744100007694215,
+            0.011830100032966584
+          ],
+          "median_seconds": 0.012422200001310557,
+          "min_seconds": 0.011011700029484928,
+          "max_seconds": 0.014104600006248802
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7912371784376387e-16,
+          "rmse": 6.7184655514009e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 84,
+          "training_relative_l2": 9.6163363271618e-17,
+          "rates": [
+            0.3,
+            2.9999999999999982
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.551115123125783e-16,
+          "timings_seconds": [
+            0.011274699994828552,
+            0.012219400028698146,
+            0.011514800018630922,
+            0.011426800047047436,
+            0.01214479998452589
+          ],
+          "median_seconds": 0.011514800018630922,
+          "min_seconds": 0.011274699994828552,
+          "max_seconds": 0.012219400028698146
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7912371784376387e-16,
+          "rmse": 6.7184655514009e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 67,
+          "training_relative_l2": 9.6163363271618e-17,
+          "rates": [
+            0.3,
+            2.9999999999999982
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.551115123125783e-16,
+          "timings_seconds": [
+            0.010898300039116293,
+            0.009810600022319704,
+            0.00998749997233972,
+            0.010004599986132234,
+            0.009183999965898693
+          ],
+          "median_seconds": 0.00998749997233972,
+          "min_seconds": 0.009183999965898693,
+          "max_seconds": 0.010898300039116293
+        }
+      }
+    },
+    "three_log_pilot": {
+      "time_min": 0.001,
+      "time_max": 1000.0,
+      "samples": 600,
+      "rates": [
+        0.01,
+        1.0,
+        100.0
+      ],
+      "amplitudes": [
+        1,
+        1,
+        1
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 9.992007221626409e-16,
+          "normalized_max_error": 3.4409777383729867e-16,
+          "rmse": 4.4149687062891536e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.6957368260778403e-16,
+          "rates": [
+            0.010000000000000026,
+            1.0000000000000018,
+            99.99999999999984
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.6645352591003757e-15,
+          "timings_seconds": [
+            0.0014662999892607331,
+            0.0012114000273868442,
+            0.0012841999996453524,
+            0.0015505999908782542,
+            0.0012259000213816762
+          ],
+          "median_seconds": 0.0012841999996453524,
+          "min_seconds": 0.0012114000273868442,
+          "max_seconds": 0.0015505999908782542
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 9.992007221626409e-16,
+          "normalized_max_error": 3.4409777383729867e-16,
+          "rmse": 4.4149687062891536e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.6957368260778403e-16,
+          "rates": [
+            0.010000000000000026,
+            1.0000000000000018,
+            99.99999999999984
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.6645352591003757e-15,
+          "timings_seconds": [
+            0.0016790999798104167,
+            0.0015750000020489097,
+            0.0018092000391334295,
+            0.0019114000024273992,
+            0.001752499956637621
+          ],
+          "median_seconds": 0.001752499956637621,
+          "min_seconds": 0.0015750000020489097,
+          "max_seconds": 0.0019114000024273992
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 9.992007221626409e-16,
+          "normalized_max_error": 3.4409777383729867e-16,
+          "rmse": 4.4149687062891536e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.6957368260778403e-16,
+          "rates": [
+            0.010000000000000026,
+            1.0000000000000018,
+            99.99999999999984
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.6645352591003757e-15,
+          "timings_seconds": [
+            0.0013576000346802175,
+            0.0014741999912075698,
+            0.0011556000099517405,
+            0.0013444000505842268,
+            0.0012105000205338001
+          ],
+          "median_seconds": 0.0013444000505842268,
+          "min_seconds": 0.0011556000099517405,
+          "max_seconds": 0.0014741999912075698
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.529323439276883e-16,
+          "rmse": 7.918666895237708e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 4.835060763290876e-17,
+          "rates": [
+            0.01,
+            1.0,
+            99.99999999999999
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-16,
+          "timings_seconds": [
+            0.027204499987419695,
+            0.024474099976941943,
+            0.02610439999261871,
+            0.02468959998805076,
+            0.02472080005099997
+          ],
+          "median_seconds": 0.02472080005099997,
+          "min_seconds": 0.024474099976941943,
+          "max_seconds": 0.027204499987419695
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 1.3322676295501878e-15,
+          "normalized_max_error": 4.587970317830649e-16,
+          "rmse": 3.0771781203069624e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 248,
+          "training_relative_l2": 1.878894943806919e-16,
+          "rates": [
+            0.010000000000000004,
+            1.0000000000000002,
+            99.99999999999987
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.3322676295501878e-15,
+          "timings_seconds": [
+            0.08932849997654557,
+            0.09138699999311939,
+            0.10193820000858977,
+            0.12208549998467788,
+            0.0896105999709107
+          ],
+          "median_seconds": 0.09138699999311939,
+          "min_seconds": 0.08932849997654557,
+          "max_seconds": 0.12208549998467788
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 1.3322676295501878e-15,
+          "normalized_max_error": 4.587970317830649e-16,
+          "rmse": 3.0771781203069624e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 13,
+          "training_relative_l2": 1.878894943806919e-16,
+          "rates": [
+            0.010000000000000004,
+            1.0000000000000002,
+            99.99999999999987
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.3322676295501878e-15,
+          "timings_seconds": [
+            0.007716000021900982,
+            0.005653600033838302,
+            0.01331670000217855,
+            0.00958449998870492,
+            0.007913100009318441
+          ],
+          "median_seconds": 0.007913100009318441,
+          "min_seconds": 0.005653600033838302,
+          "max_seconds": 0.01331670000217855
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 1.3322676295501878e-15,
+          "normalized_max_error": 4.587970317830649e-16,
+          "rmse": 3.0771781203069624e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 248,
+          "training_relative_l2": 1.878894943806919e-16,
+          "rates": [
+            0.010000000000000004,
+            1.0000000000000002,
+            99.99999999999987
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.3322676295501878e-15,
+          "timings_seconds": [
+            0.09678010002244264,
+            0.09319929999765009,
+            0.10610799997812137,
+            0.10949719999916852,
+            0.08654920000117272
+          ],
+          "median_seconds": 0.09678010002244264,
+          "min_seconds": 0.08654920000117272,
+          "max_seconds": 0.10949719999916852
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 6.661338147750939e-16,
+          "normalized_max_error": 2.2939851589153245e-16,
+          "rmse": 2.1799757693520186e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 246,
+          "training_relative_l2": 1.3310719401087245e-16,
+          "rates": [
+            0.010000000000000004,
+            1.0,
+            99.99999999999996
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 4.440892098500626e-16,
+          "timings_seconds": [
+            0.035425799957010895,
+            0.04131410003174096,
+            0.03318530000979081,
+            0.04015270003583282,
+            0.03643599996576086
+          ],
+          "median_seconds": 0.03643599996576086,
+          "min_seconds": 0.03318530000979081,
+          "max_seconds": 0.04131410003174096
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 6.661338147750939e-16,
+          "normalized_max_error": 2.2939851589153245e-16,
+          "rmse": 2.1799757693520186e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 18,
+          "training_relative_l2": 1.3310719401087245e-16,
+          "rates": [
+            0.010000000000000004,
+            1.0,
+            99.99999999999996
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 4.440892098500626e-16,
+          "timings_seconds": [
+            0.006234899978153408,
+            0.004983999999240041,
+            0.006525499979034066,
+            0.006678699981421232,
+            0.004841199959628284
+          ],
+          "median_seconds": 0.006234899978153408,
+          "min_seconds": 0.004841199959628284,
+          "max_seconds": 0.006678699981421232
+        }
+      }
+    },
+    "two_log_pilot": {
+      "time_min": 0.001,
+      "time_max": 1000.0,
+      "samples": 600,
+      "rates": [
+        0.01,
+        100.0
+      ],
+      "amplitudes": [
+        1,
+        1
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 2.220446049250313e-16,
+          "normalized_max_error": 1.1656940823969759e-16,
+          "rmse": 2.765749094582482e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.643094037199415e-17,
+          "rates": [
+            0.01,
+            100.0
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.0010228999890387058,
+            0.0008847999852150679,
+            0.0008783999946899712,
+            0.0009453999809920788,
+            0.0010076999897137284
+          ],
+          "median_seconds": 0.0009453999809920788,
+          "min_seconds": 0.0008783999946899712,
+          "max_seconds": 0.0010228999890387058
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 2.220446049250313e-16,
+          "normalized_max_error": 1.1656940823969759e-16,
+          "rmse": 2.765749094582482e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.643094037199415e-17,
+          "rates": [
+            0.01,
+            100.0
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.0010792999528348446,
+            0.0019439999596215785,
+            0.0010508000268600881,
+            0.0012650999706238508,
+            0.0011464999988675117
+          ],
+          "median_seconds": 0.0011464999988675117,
+          "min_seconds": 0.0010508000268600881,
+          "max_seconds": 0.0019439999596215785
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 2.220446049250313e-16,
+          "normalized_max_error": 1.1656940823969759e-16,
+          "rmse": 2.765749094582482e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.643094037199415e-17,
+          "rates": [
+            0.01,
+            100.0
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0,
+          "timings_seconds": [
+            0.0011520999833010137,
+            0.0009177000029012561,
+            0.0008826000266708434,
+            0.0009593999711796641,
+            0.0010099000064656138
+          ],
+          "median_seconds": 0.0009593999711796641,
+          "min_seconds": 0.0008826000266708434,
+          "max_seconds": 0.0011520999833010137
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.3313881647939517e-16,
+          "rmse": 8.470201686110611e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 8.094566356105057e-17,
+          "rates": [
+            0.01,
+            100.00000000000001
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.220446049250313e-16,
+          "timings_seconds": [
+            0.0037021999596618116,
+            0.003929700003936887,
+            0.004063200030941516,
+            0.003601200005505234,
+            0.004218299989588559
+          ],
+          "median_seconds": 0.003929700003936887,
+          "min_seconds": 0.003601200005505234,
+          "max_seconds": 0.004218299989588559
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.3313881647939517e-16,
+          "rmse": 1.2243609067654332e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 37,
+          "training_relative_l2": 1.1700631190264595e-16,
+          "rates": [
+            0.009999999999999995,
+            99.99999999999996
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.551115123125783e-16,
+          "timings_seconds": [
+            0.011010299960616976,
+            0.011426599987316877,
+            0.01206630002707243,
+            0.012105499976314604,
+            0.013318700017407537
+          ],
+          "median_seconds": 0.01206630002707243,
+          "min_seconds": 0.011010299960616976,
+          "max_seconds": 0.013318700017407537
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.3313881647939517e-16,
+          "rmse": 1.2243609067654332e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 12,
+          "training_relative_l2": 1.1700631190264595e-16,
+          "rates": [
+            0.009999999999999995,
+            99.99999999999996
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.551115123125783e-16,
+          "timings_seconds": [
+            0.0046168999979272485,
+            0.005320199998095632,
+            0.004486999998334795,
+            0.004706400039140135,
+            0.004688099958002567
+          ],
+          "median_seconds": 0.004688099958002567,
+          "min_seconds": 0.004486999998334795,
+          "max_seconds": 0.005320199998095632
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.3313881647939517e-16,
+          "rmse": 1.2243609067654332e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 37,
+          "training_relative_l2": 1.1700631190264595e-16,
+          "rates": [
+            0.009999999999999995,
+            99.99999999999996
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.551115123125783e-16,
+          "timings_seconds": [
+            0.018570100015494972,
+            0.011846800043713301,
+            0.01167360000545159,
+            0.012701200030278414,
+            0.011836299963761121
+          ],
+          "median_seconds": 0.011846800043713301,
+          "min_seconds": 0.01167360000545159,
+          "max_seconds": 0.018570100015494972
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.3313881647939517e-16,
+          "rmse": 1.2399693027290168e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 50,
+          "training_relative_l2": 1.1849793160099112e-16,
+          "rates": [
+            0.010000000000000004,
+            100.00000000000004
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 4.440892098500626e-16,
+          "timings_seconds": [
+            0.007130900048650801,
+            0.006528800004161894,
+            0.006371700030285865,
+            0.007704199990257621,
+            0.006553800019901246
+          ],
+          "median_seconds": 0.006553800019901246,
+          "min_seconds": 0.006371700030285865,
+          "max_seconds": 0.007704199990257621
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.3313881647939517e-16,
+          "rmse": 1.2399693027290168e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 25,
+          "training_relative_l2": 1.1849793160099112e-16,
+          "rates": [
+            0.010000000000000004,
+            100.00000000000004
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 4.440892098500626e-16,
+          "timings_seconds": [
+            0.005235099990386516,
+            0.004346700035966933,
+            0.005295299983117729,
+            0.006430700013879687,
+            0.005166000046301633
+          ],
+          "median_seconds": 0.005235099990386516,
+          "min_seconds": 0.004346700035966933,
+          "max_seconds": 0.006430700013879687
+        }
+      }
+    },
+    "three_log_holdout": {
+      "time_min": 0.002,
+      "time_max": 400.0,
+      "samples": 600,
+      "rates": [
+        0.03,
+        2.0,
+        60.0
+      ],
+      "amplitudes": [
+        0.7,
+        1.3,
+        0.5
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.8213600184983203e-16,
+          "rmse": 1.2966771985152697e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 9.268857328340943e-17,
+          "rates": [
+            0.029999999999999995,
+            1.9999999999999998,
+            59.99999999999996
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 6.661338147750939e-16,
+          "timings_seconds": [
+            0.0012519999872893095,
+            0.0012670999858528376,
+            0.0012060999870300293,
+            0.0016447000089101493,
+            0.001248000015038997
+          ],
+          "median_seconds": 0.0012519999872893095,
+          "min_seconds": 0.0012060999870300293,
+          "max_seconds": 0.0016447000089101493
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.8213600184983203e-16,
+          "rmse": 1.2966771985152697e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 9.268857328340943e-17,
+          "rates": [
+            0.029999999999999995,
+            1.9999999999999998,
+            59.99999999999996
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 6.661338147750939e-16,
+          "timings_seconds": [
+            0.0015268000424839556,
+            0.0017113000503741205,
+            0.0017958000535145402,
+            0.0014785000239498913,
+            0.0017267000512219965
+          ],
+          "median_seconds": 0.0017113000503741205,
+          "min_seconds": 0.0014785000239498913,
+          "max_seconds": 0.0017958000535145402
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.8213600184983203e-16,
+          "rmse": 1.2966771985152697e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 9.268857328340943e-17,
+          "rates": [
+            0.029999999999999995,
+            1.9999999999999998,
+            59.99999999999996
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 6.661338147750939e-16,
+          "timings_seconds": [
+            0.0012579000322148204,
+            0.0012431999784894288,
+            0.0012518000439740717,
+            0.0013051999849267304,
+            0.0013479000190272927
+          ],
+          "median_seconds": 0.0012579000322148204,
+          "min_seconds": 0.0012431999784894288,
+          "max_seconds": 0.0013479000190272927
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 1.1102230246251565e-15,
+          "normalized_max_error": 4.5534000462458e-16,
+          "rmse": 3.1986192438438768e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.286424520522295e-16,
+          "rates": [
+            0.03,
+            2.0000000000000036,
+            60.00000000000033
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.551115123125783e-15,
+          "timings_seconds": [
+            0.00996380002470687,
+            0.012551399995572865,
+            0.009675200039055198,
+            0.009801000007428229,
+            0.009148499986622483
+          ],
+          "median_seconds": 0.009801000007428229,
+          "min_seconds": 0.009148499986622483,
+          "max_seconds": 0.012551399995572865
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 8.881784197001252e-16,
+          "normalized_max_error": 3.6427200369966405e-16,
+          "rmse": 1.7200722370256085e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 108,
+          "training_relative_l2": 1.2295353213340908e-16,
+          "rates": [
+            0.029999999999999995,
+            2.0,
+            59.99999999999993
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.2212453270876722e-15,
+          "timings_seconds": [
+            0.03380269999615848,
+            0.03410499996971339,
+            0.035449399962089956,
+            0.03401489998213947,
+            0.03362330002710223
+          ],
+          "median_seconds": 0.03401489998213947,
+          "min_seconds": 0.03362330002710223,
+          "max_seconds": 0.035449399962089956
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 8.881784197001252e-16,
+          "normalized_max_error": 3.6427200369966405e-16,
+          "rmse": 1.7200722370256085e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 16,
+          "training_relative_l2": 1.2295353213340908e-16,
+          "rates": [
+            0.029999999999999995,
+            2.0,
+            59.99999999999993
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.2212453270876722e-15,
+          "timings_seconds": [
+            0.007126300013624132,
+            0.006570399971678853,
+            0.0065784000325948,
+            0.006463799974881113,
+            0.007054699992295355
+          ],
+          "median_seconds": 0.0065784000325948,
+          "min_seconds": 0.006463799974881113,
+          "max_seconds": 0.007126300013624132
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 8.881784197001252e-16,
+          "normalized_max_error": 3.6427200369966405e-16,
+          "rmse": 1.7200722370256085e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 108,
+          "training_relative_l2": 1.2295353213340908e-16,
+          "rates": [
+            0.029999999999999995,
+            2.0,
+            59.99999999999993
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.2212453270876722e-15,
+          "timings_seconds": [
+            0.03519649995723739,
+            0.033400599961169064,
+            0.03404860000591725,
+            0.03482210001675412,
+            0.03422329999739304
+          ],
+          "median_seconds": 0.03422329999739304,
+          "min_seconds": 0.033400599961169064,
+          "max_seconds": 0.03519649995723739
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.8213600184983203e-16,
+          "rmse": 1.6393527882724203e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 121,
+          "training_relative_l2": 1.1718357601038699e-16,
+          "rates": [
+            0.029999999999999995,
+            2.0,
+            59.999999999999986
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.220446049250313e-16,
+          "timings_seconds": [
+            0.01598349999403581,
+            0.019419100019149482,
+            0.016111699980683625,
+            0.015785700001288205,
+            0.015754199994262308
+          ],
+          "median_seconds": 0.01598349999403581,
+          "min_seconds": 0.015754199994262308,
+          "max_seconds": 0.019419100019149482
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.8213600184983203e-16,
+          "rmse": 1.6393527882724203e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 21,
+          "training_relative_l2": 1.1718357601038699e-16,
+          "rates": [
+            0.029999999999999995,
+            2.0,
+            59.999999999999986
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.220446049250313e-16,
+          "timings_seconds": [
+            0.0044769999803975224,
+            0.004821799986530095,
+            0.004344200016930699,
+            0.00441230001160875,
+            0.00454720004927367
+          ],
+          "median_seconds": 0.0044769999803975224,
+          "min_seconds": 0.004344200016930699,
+          "max_seconds": 0.004821799986530095
+        }
+      }
+    },
+    "close_rates_holdout": {
+      "time_min": 0.01,
+      "time_max": 20.0,
+      "samples": 600,
+      "rates": [
+        0.5,
+        0.7
+      ],
+      "amplitudes": [
+        2,
+        0.5
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 6.228906565143529e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.148784300789896e-16,
+          "rates": [
+            0.4999999999999999,
+            0.6999999999999992
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-15,
+          "timings_seconds": [
+            0.006502999982330948,
+            0.008887799980584532,
+            0.008659799990709871,
+            0.006778399983886629,
+            0.007991300022695214
+          ],
+          "median_seconds": 0.007991300022695214,
+          "min_seconds": 0.006502999982330948,
+          "max_seconds": 0.008887799980584532
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 6.228906565143529e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.148784300789896e-16,
+          "rates": [
+            0.4999999999999999,
+            0.6999999999999992
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-15,
+          "timings_seconds": [
+            0.007520899991504848,
+            0.006995100004132837,
+            0.00771169998915866,
+            0.009729399986099452,
+            0.0069754000287503
+          ],
+          "median_seconds": 0.007520899991504848,
+          "min_seconds": 0.0069754000287503,
+          "max_seconds": 0.009729399986099452
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 6.228906565143529e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.148784300789896e-16,
+          "rates": [
+            0.4999999999999999,
+            0.6999999999999992
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-15,
+          "timings_seconds": [
+            0.006946900044567883,
+            0.00783630000660196,
+            0.007224400003906339,
+            0.00711330003105104,
+            0.010017900029197335
+          ],
+          "median_seconds": 0.007224400003906339,
+          "min_seconds": 0.006946900044567883,
+          "max_seconds": 0.010017900029197335
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 6.988850955485401e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.288939266347318e-16,
+          "rates": [
+            0.5000000000000002,
+            0.7000000000000016
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.4424906541753444e-15,
+          "timings_seconds": [
+            0.007470799959264696,
+            0.008225099998526275,
+            0.010127799992915243,
+            0.01003950001904741,
+            0.008016099978704005
+          ],
+          "median_seconds": 0.008225099998526275,
+          "min_seconds": 0.007470799959264696,
+          "max_seconds": 0.010127799992915243
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 6.445996709335357e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 145,
+          "training_relative_l2": 1.1888217852015822e-16,
+          "rates": [
+            0.5000000000000006,
+            0.700000000000004
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.773159728050814e-15,
+          "timings_seconds": [
+            0.05148999998345971,
+            0.052384499984327704,
+            0.10101600002963096,
+            0.10599090001778677,
+            0.054926699958741665
+          ],
+          "median_seconds": 0.054926699958741665,
+          "min_seconds": 0.05148999998345971,
+          "max_seconds": 0.10599090001778677
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 6.445996709335357e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 128,
+          "training_relative_l2": 1.1888217852015822e-16,
+          "rates": [
+            0.5000000000000006,
+            0.700000000000004
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.773159728050814e-15,
+          "timings_seconds": [
+            0.04844089999096468,
+            0.053000699961557984,
+            0.10936070000752807,
+            0.07642629998736084,
+            0.06016659998567775
+          ],
+          "median_seconds": 0.06016659998567775,
+          "min_seconds": 0.04844089999096468,
+          "max_seconds": 0.10936070000752807
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 6.445996709335357e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 145,
+          "training_relative_l2": 1.1888217852015822e-16,
+          "rates": [
+            0.5000000000000006,
+            0.700000000000004
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 5.773159728050814e-15,
+          "timings_seconds": [
+            0.05243529996369034,
+            0.05318239994812757,
+            0.1857878000009805,
+            0.09960610000416636,
+            0.05685699998866767
+          ],
+          "median_seconds": 0.05685699998866767,
+          "min_seconds": 0.05243529996369034,
+          "max_seconds": 0.1857878000009805
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 5.807297797402906e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 367,
+          "training_relative_l2": 1.0710278714085153e-16,
+          "rates": [
+            0.5000000000000003,
+            0.7000000000000026
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 3.774758283725532e-15,
+          "timings_seconds": [
+            0.04992259998107329,
+            0.049698400020133704,
+            0.0579143000068143,
+            0.06041659996844828,
+            0.050772299990057945
+          ],
+          "median_seconds": 0.050772299990057945,
+          "min_seconds": 0.049698400020133704,
+          "max_seconds": 0.06041659996844828
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 1.7859745410140948e-16,
+          "rmse": 5.807297797402906e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 350,
+          "training_relative_l2": 1.0710278714085153e-16,
+          "rates": [
+            0.5000000000000003,
+            0.7000000000000026
+          ],
+          "component_count": 2,
+          "correct_component_count": true,
+          "max_rate_relative_error": 3.774758283725532e-15,
+          "timings_seconds": [
+            0.04572860000189394,
+            0.05223289999412373,
+            0.07503070001257583,
+            0.06097809999482706,
+            0.04722360003506765
+          ],
+          "median_seconds": 0.05223289999412373,
+          "min_seconds": 0.04572860000189394,
+          "max_seconds": 0.07503070001257583
+        }
+      }
+    },
+    "weak_fast": {
+      "time_min": 0.001,
+      "time_max": 1000.0,
+      "samples": 600,
+      "rates": [
+        0.02,
+        1.0,
+        50.0
+      ],
+      "amplitudes": [
+        1,
+        1,
+        0.001
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2205218473654736e-16,
+          "rmse": 1.5155407164014324e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.0679671403934201e-16,
+          "rates": [
+            0.020000000000000007,
+            1.0000000000000009,
+            50.00000000004176
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 8.351097591230427e-13,
+          "timings_seconds": [
+            0.0037483000196516514,
+            0.002349700022023171,
+            0.0024050999782048166,
+            0.0030159999732859433,
+            0.0024021000135689974
+          ],
+          "median_seconds": 0.0024050999782048166,
+          "min_seconds": 0.002349700022023171,
+          "max_seconds": 0.0037483000196516514
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2205218473654736e-16,
+          "rmse": 1.5155407164014324e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.0679671403934201e-16,
+          "rates": [
+            0.020000000000000007,
+            1.0000000000000009,
+            50.00000000004176
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 8.351097591230427e-13,
+          "timings_seconds": [
+            0.004385799984447658,
+            0.0028698999667540193,
+            0.0027211999986320734,
+            0.002668500004801899,
+            0.0030414999928325415
+          ],
+          "median_seconds": 0.0028698999667540193,
+          "min_seconds": 0.002668500004801899,
+          "max_seconds": 0.004385799984447658
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2205218473654736e-16,
+          "rmse": 1.5155407164014324e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.0679671403934201e-16,
+          "rates": [
+            0.020000000000000007,
+            1.0000000000000009,
+            50.00000000004176
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 8.351097591230427e-13,
+          "timings_seconds": [
+            0.0040886999922804534,
+            0.0038782000192441046,
+            0.0031633999897167087,
+            0.0026351999840699136,
+            0.0026039000367745757
+          ],
+          "median_seconds": 0.0031633999897167087,
+          "min_seconds": 0.0026039000367745757,
+          "max_seconds": 0.0040886999922804534
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2205218473654736e-16,
+          "rmse": 1.8163867611969768e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.279966519019065e-16,
+          "rates": [
+            0.02000000000000001,
+            1.0000000000000004,
+            50.00000000000054
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.0880185641326534e-14,
+          "timings_seconds": [
+            0.013745300006121397,
+            0.011857799952849746,
+            0.010591900034341961,
+            0.010332899983040988,
+            0.010123399959411472
+          ],
+          "median_seconds": 0.010591900034341961,
+          "min_seconds": 0.010123399959411472,
+          "max_seconds": 0.013745300006121397
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.0004245827788271761,
+          "normalized_max_error": 0.0002122986362850839,
+          "rmse": 0.00020014358709368414,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 85,
+          "training_relative_l2": 0.00014103664260769794,
+          "rates": [
+            0.020004244472142205,
+            1.001231202412345
+          ],
+          "component_count": 2,
+          "correct_component_count": false,
+          "max_rate_relative_error": null,
+          "timings_seconds": [
+            0.045012100017629564,
+            0.029680499981623143,
+            0.029859300004318357,
+            0.03017559996806085,
+            0.026271199982147664
+          ],
+          "median_seconds": 0.029859300004318357,
+          "min_seconds": 0.026271199982147664,
+          "max_seconds": 0.045012100017629564
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2205218473654736e-16,
+          "rmse": 1.4152960725705315e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 30,
+          "training_relative_l2": 9.9732701541806e-17,
+          "rates": [
+            0.02,
+            0.9999999999999998,
+            50.000000000003304
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 6.616929226765933e-14,
+          "timings_seconds": [
+            0.021234599989838898,
+            0.016174099990166724,
+            0.015779399953316897,
+            0.013429399987217039,
+            0.013227500021457672
+          ],
+          "median_seconds": 0.015779399953316897,
+          "min_seconds": 0.013227500021457672,
+          "max_seconds": 0.021234599989838898
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2205218473654736e-16,
+          "rmse": 1.4152960725705315e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 115,
+          "training_relative_l2": 9.9732701541806e-17,
+          "rates": [
+            0.02,
+            0.9999999999999998,
+            50.000000000003304
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 6.616929226765933e-14,
+          "timings_seconds": [
+            0.04763109999476001,
+            0.06391500000609085,
+            0.047061100020073354,
+            0.045635599992237985,
+            0.03892419999465346
+          ],
+          "median_seconds": 0.047061100020073354,
+          "min_seconds": 0.03892419999465346,
+          "max_seconds": 0.06391500000609085
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 6.661338147750939e-16,
+          "normalized_max_error": 3.3307827710482106e-16,
+          "rmse": 1.421090276944317e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 116,
+          "training_relative_l2": 1.0014100597130491e-16,
+          "rates": [
+            0.02,
+            0.9999999999999998,
+            49.99999999999509
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 9.814371537686384e-14,
+          "timings_seconds": [
+            0.02244329999666661,
+            0.02264489996014163,
+            0.01830970001174137,
+            0.01797500002430752,
+            0.016651199955958873
+          ],
+          "median_seconds": 0.01830970001174137,
+          "min_seconds": 0.016651199955958873,
+          "max_seconds": 0.02264489996014163
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 6.661338147750939e-16,
+          "normalized_max_error": 3.3307827710482106e-16,
+          "rmse": 1.421090276944317e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 25,
+          "training_relative_l2": 1.0014100597130491e-16,
+          "rates": [
+            0.02,
+            0.9999999999999998,
+            49.99999999999509
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 9.814371537686384e-14,
+          "timings_seconds": [
+            0.011020400037523359,
+            0.006599900021683425,
+            0.006231199949979782,
+            0.0057480999967083335,
+            0.006412999995518476
+          ],
+          "median_seconds": 0.006412999995518476,
+          "min_seconds": 0.0057480999967083335,
+          "max_seconds": 0.011020400037523359
+        }
+      }
+    },
+    "weak_middle": {
+      "time_min": 0.001,
+      "time_max": 1000.0,
+      "samples": 600,
+      "rates": [
+        0.02,
+        1.0,
+        50.0
+      ],
+      "amplitudes": [
+        1,
+        0.001,
+        1
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2748042889141936e-16,
+          "rmse": 8.539181128783076e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 7.851491091755175e-17,
+          "rates": [
+            0.02,
+            1.0000000000000346,
+            50.0
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 3.4638958368304884e-14,
+          "timings_seconds": [
+            0.0027817999944090843,
+            0.0020186000037938356,
+            0.0020234999828971922,
+            0.002108899992890656,
+            0.0023879000218585134
+          ],
+          "median_seconds": 0.002108899992890656,
+          "min_seconds": 0.0020186000037938356,
+          "max_seconds": 0.0027817999944090843
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2748042889141936e-16,
+          "rmse": 8.539181128783076e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 7.851491091755175e-17,
+          "rates": [
+            0.02,
+            1.0000000000000346,
+            50.0
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 3.4638958368304884e-14,
+          "timings_seconds": [
+            0.002994300040882081,
+            0.002940600039437413,
+            0.002430399996228516,
+            0.0024060000432655215,
+            0.0025619000080041587
+          ],
+          "median_seconds": 0.0025619000080041587,
+          "min_seconds": 0.0024060000432655215,
+          "max_seconds": 0.002994300040882081
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2748042889141936e-16,
+          "rmse": 8.539181128783076e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 7.851491091755175e-17,
+          "rates": [
+            0.02,
+            1.0000000000000346,
+            50.0
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 3.4638958368304884e-14,
+          "timings_seconds": [
+            0.002307299990206957,
+            0.002347300003748387,
+            0.002215399988926947,
+            0.0021874000085517764,
+            0.002384600054938346
+          ],
+          "median_seconds": 0.002307299990206957,
+          "min_seconds": 0.0021874000085517764,
+          "max_seconds": 0.002384600054938346
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2748042889141936e-16,
+          "rmse": 9.254967911832323e-17,
+          "passes_transform_target": true,
+          "training_relative_l2": 8.50963306883116e-17,
+          "rates": [
+            0.02,
+            1.000000000000088,
+            50.0
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 8.79296635503124e-14,
+          "timings_seconds": [
+            0.008954100019764155,
+            0.008851499995216727,
+            0.008672099967952818,
+            0.009124399977736175,
+            0.00873399997362867
+          ],
+          "median_seconds": 0.008851499995216727,
+          "min_seconds": 0.008672099967952818,
+          "max_seconds": 0.009124399977736175
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.0003791998880706693,
+          "normalized_max_error": 0.0001942414975653611,
+          "rmse": 0.00019308460292519357,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 47,
+          "training_relative_l2": 0.00017753482646154956,
+          "rates": [
+            0.020018210570608236,
+            49.94252115724356
+          ],
+          "component_count": 2,
+          "correct_component_count": false,
+          "max_rate_relative_error": null,
+          "timings_seconds": [
+            0.01615999999921769,
+            0.014917000022251159,
+            0.015043499995954335,
+            0.014790199988055974,
+            0.015436399960890412
+          ],
+          "median_seconds": 0.015043499995954335,
+          "min_seconds": 0.014790199988055974,
+          "max_seconds": 0.01615999999921769
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2748042889141936e-16,
+          "rmse": 1.2030980306971405e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 34,
+          "training_relative_l2": 1.1062083504338267e-16,
+          "rates": [
+            0.02,
+            0.9999999999999695,
+            49.99999999999999
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 3.0531133177191805e-14,
+          "timings_seconds": [
+            0.01572129997657612,
+            0.014884400006849319,
+            0.014299699978437275,
+            0.015564600005745888,
+            0.014155600045341998
+          ],
+          "median_seconds": 0.014884400006849319,
+          "min_seconds": 0.014155600045341998,
+          "max_seconds": 0.01572129997657612
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2748042889141936e-16,
+          "rmse": 1.2030980306971405e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 81,
+          "training_relative_l2": 1.1062083504338267e-16,
+          "rates": [
+            0.02,
+            0.9999999999999695,
+            49.99999999999999
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 3.0531133177191805e-14,
+          "timings_seconds": [
+            0.03008979995502159,
+            0.029188500018790364,
+            0.02987789997132495,
+            0.02896840003086254,
+            0.031315800035372376
+          ],
+          "median_seconds": 0.02987789997132495,
+          "min_seconds": 0.02896840003086254,
+          "max_seconds": 0.031315800035372376
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2748042889141936e-16,
+          "rmse": 1.2736021826922436e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 77,
+          "training_relative_l2": 1.1710345571827862e-16,
+          "rates": [
+            0.02,
+            0.9999999999999795,
+            49.99999999999999
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.0539125955565396e-14,
+          "timings_seconds": [
+            0.013329299981705844,
+            0.013162999995984137,
+            0.013330099987797439,
+            0.01471680001122877,
+            0.013587200024630874
+          ],
+          "median_seconds": 0.013330099987797439,
+          "min_seconds": 0.013162999995984137,
+          "max_seconds": 0.01471680001122877
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2748042889141936e-16,
+          "rmse": 1.2736021826922436e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 24,
+          "training_relative_l2": 1.1710345571827862e-16,
+          "rates": [
+            0.02,
+            0.9999999999999795,
+            49.99999999999999
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 2.0539125955565396e-14,
+          "timings_seconds": [
+            0.005982499977108091,
+            0.006063099950551987,
+            0.0058682000380940735,
+            0.00618570001097396,
+            0.006437500007450581
+          ],
+          "median_seconds": 0.006063099950551987,
+          "min_seconds": 0.0058682000380940735,
+          "max_seconds": 0.006437500007450581
+        }
+      }
+    },
+    "weak_slow": {
+      "time_min": 0.001,
+      "time_max": 1000.0,
+      "samples": 600,
+      "rates": [
+        0.02,
+        1.0,
+        50.0
+      ],
+      "amplitudes": [
+        0.001,
+        1,
+        1
+      ],
+      "noise_sigma": 0,
+      "noise_seed": 0,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 5.195496810550537e-16,
+          "normalized_max_error": 2.6626779340608306e-16,
+          "rmse": 2.2418797129020427e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.366264412548335e-16,
+          "rates": [
+            0.01999999999997086,
+            0.9999999999999984,
+            50.00000000000001
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.456945675215593e-12,
+          "timings_seconds": [
+            0.0031456000288017094,
+            0.0020417000050656497,
+            0.0021015999955125153,
+            0.0020465999841690063,
+            0.002090799971483648
+          ],
+          "median_seconds": 0.002090799971483648,
+          "min_seconds": 0.0020417000050656497,
+          "max_seconds": 0.0031456000288017094
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 5.195496810550537e-16,
+          "normalized_max_error": 2.6626779340608306e-16,
+          "rmse": 2.2418797129020427e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.366264412548335e-16,
+          "rates": [
+            0.01999999999997086,
+            0.9999999999999984,
+            50.00000000000001
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.456945675215593e-12,
+          "timings_seconds": [
+            0.0026803999789990485,
+            0.0027339000371284783,
+            0.0027632000274024904,
+            0.00257060001604259,
+            0.0023864000104367733
+          ],
+          "median_seconds": 0.0026803999789990485,
+          "min_seconds": 0.0023864000104367733,
+          "max_seconds": 0.0027632000274024904
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 5.195496810550537e-16,
+          "normalized_max_error": 2.6626779340608306e-16,
+          "rmse": 2.2418797129020427e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 2.366264412548335e-16,
+          "rates": [
+            0.01999999999997086,
+            0.9999999999999984,
+            50.00000000000001
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.456945675215593e-12,
+          "timings_seconds": [
+            0.002406699990388006,
+            0.0023031000164337456,
+            0.0024496999685652554,
+            0.002767500001937151,
+            0.002313899982254952
+          ],
+          "median_seconds": 0.002406699990388006,
+          "min_seconds": 0.0023031000164337456,
+          "max_seconds": 0.002767500001937151
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2759450788633476e-16,
+          "rmse": 1.3459660488006063e-16,
+          "passes_transform_target": true,
+          "training_relative_l2": 1.4206433750419207e-16,
+          "rates": [
+            0.02000000000000007,
+            1.0,
+            50.0
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 3.552713678800501e-15,
+          "timings_seconds": [
+            0.010237500013317913,
+            0.009713099978398532,
+            0.009893500013276935,
+            0.010169300017878413,
+            0.010279599984642118
+          ],
+          "median_seconds": 0.010169300017878413,
+          "min_seconds": 0.009713099978398532,
+          "max_seconds": 0.010279599984642118
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.0008534062103237952,
+          "normalized_max_error": 0.0004373683533796373,
+          "rmse": 0.0003369759875741711,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 84,
+          "training_relative_l2": 0.0003556721989548293,
+          "rates": [
+            0.9975585439627103,
+            49.97312932276048
+          ],
+          "component_count": 2,
+          "correct_component_count": false,
+          "max_rate_relative_error": null,
+          "timings_seconds": [
+            0.02846879995195195,
+            0.026750000019092113,
+            0.025075200013816357,
+            0.026626600010786206,
+            0.028219000028911978
+          ],
+          "median_seconds": 0.026750000019092113,
+          "min_seconds": 0.025075200013816357,
+          "max_seconds": 0.02846879995195195
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2759450788633476e-16,
+          "rmse": 1.0331116402834424e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 29,
+          "training_relative_l2": 1.0904310764415048e-16,
+          "rates": [
+            0.01999999999999969,
+            1.0,
+            49.99999999999999
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.5432100042289676e-14,
+          "timings_seconds": [
+            0.012841500050853938,
+            0.012098599981982261,
+            0.012301799957640469,
+            0.014848400023765862,
+            0.012572999985422939
+          ],
+          "median_seconds": 0.012572999985422939,
+          "min_seconds": 0.012098599981982261,
+          "max_seconds": 0.014848400023765862
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2759450788633476e-16,
+          "rmse": 1.0331116402834424e-16,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 113,
+          "training_relative_l2": 1.0904310764415048e-16,
+          "rates": [
+            0.01999999999999969,
+            1.0,
+            49.99999999999999
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.5432100042289676e-14,
+          "timings_seconds": [
+            0.04172450001351535,
+            0.038673800008837134,
+            0.03708510001888499,
+            0.041959900001529604,
+            0.039998099964577705
+          ],
+          "median_seconds": 0.039998099964577705,
+          "min_seconds": 0.03708510001888499,
+          "max_seconds": 0.041959900001529604
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2759450788633476e-16,
+          "rmse": 9.889298063796502e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 461,
+          "training_relative_l2": 1.0437979316541187e-16,
+          "rates": [
+            0.02000000000000002,
+            1.0,
+            50.000000000000014
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-15,
+          "timings_seconds": [
+            0.07866560004185885,
+            0.07896610000170767,
+            0.08463250001659617,
+            0.09179979999316856,
+            0.09221839997917414
+          ],
+          "median_seconds": 0.08463250001659617,
+          "min_seconds": 0.07866560004185885,
+          "max_seconds": 0.09221839997917414
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 4.440892098500626e-16,
+          "normalized_max_error": 2.2759450788633476e-16,
+          "rmse": 9.889298063796502e-17,
+          "passes_transform_target": true,
+          "optimizer_success": true,
+          "total_nfev": 349,
+          "training_relative_l2": 1.0437979316541187e-16,
+          "rates": [
+            0.02000000000000002,
+            1.0,
+            50.000000000000014
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 1.1102230246251565e-15,
+          "timings_seconds": [
+            0.06552599999122322,
+            0.0612330999574624,
+            0.0717770999763161,
+            0.06963810004526749,
+            0.07519709999905899
+          ],
+          "median_seconds": 0.06963810004526749,
+          "min_seconds": 0.0612330999574624,
+          "max_seconds": 0.07519709999905899
+        }
+      }
+    },
+    "noisy_log_seed7": {
+      "time_min": 0.002,
+      "time_max": 400.0,
+      "samples": 600,
+      "rates": [
+        0.03,
+        2.0,
+        60.0
+      ],
+      "amplitudes": [
+        0.7,
+        1.3,
+        0.5
+      ],
+      "noise_sigma": 0.001,
+      "noise_seed": 7,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00037441228153115014,
+          "normalized_max_error": 0.00015355913741876693,
+          "rmse": 0.00016852685893171797,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.000654409666943838,
+          "rates": [
+            0.03004959071179213,
+            2.000278782114011,
+            59.961445283485034
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016530237264043013,
+          "timings_seconds": [
+            0.002643599989823997,
+            0.0032767000375315547,
+            0.0027867999742738903,
+            0.0026526000001467764,
+            0.003139899985399097
+          ],
+          "median_seconds": 0.0027867999742738903,
+          "min_seconds": 0.002643599989823997,
+          "max_seconds": 0.0032767000375315547
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00037441228153115014,
+          "normalized_max_error": 0.00015355913741876693,
+          "rmse": 0.00016852685893171797,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.000654409666943838,
+          "rates": [
+            0.03004959071179213,
+            2.000278782114011,
+            59.961445283485034
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016530237264043013,
+          "timings_seconds": [
+            0.003303999954368919,
+            0.003613299981225282,
+            0.0033540999866090715,
+            0.0033299000351689756,
+            0.003357800014782697
+          ],
+          "median_seconds": 0.0033540999866090715,
+          "min_seconds": 0.003303999954368919,
+          "max_seconds": 0.003613299981225282
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00037441228153115014,
+          "normalized_max_error": 0.00015355913741876693,
+          "rmse": 0.00016852685893171797,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.000654409666943838,
+          "rates": [
+            0.03004959071179213,
+            2.000278782114011,
+            59.961445283485034
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016530237264043013,
+          "timings_seconds": [
+            0.0030595000134781003,
+            0.0031509000109508634,
+            0.0033458000398240983,
+            0.0037410000222735107,
+            0.003984199953265488
+          ],
+          "median_seconds": 0.0033458000398240983,
+          "min_seconds": 0.0030595000134781003,
+          "max_seconds": 0.003984199953265488
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00037441228153115014,
+          "normalized_max_error": 0.00015355913741876693,
+          "rmse": 0.00016852685893174466,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.0006544096669438431,
+          "rates": [
+            0.03004959071179213,
+            2.0002787821140116,
+            59.96144528348503
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016530237264043013,
+          "timings_seconds": [
+            0.012256299960426986,
+            0.0132484000059776,
+            0.013003600004594773,
+            0.013360299984924495,
+            0.01158480002777651
+          ],
+          "median_seconds": 0.013003600004594773,
+          "min_seconds": 0.01158480002777651,
+          "max_seconds": 0.013360299984924495
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00037441228140250304,
+          "normalized_max_error": 0.0001535591373660044,
+          "rmse": 0.00016852685902985602,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 110,
+          "training_relative_l2": 0.0006544096669438366,
+          "rates": [
+            0.03004959071175877,
+            2.000278782105256,
+            59.96144528184804
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.001653023725292302,
+          "timings_seconds": [
+            0.03519280004547909,
+            0.037688200012780726,
+            0.03972889995202422,
+            0.04270330001600087,
+            0.03530240000691265
+          ],
+          "median_seconds": 0.037688200012780726,
+          "min_seconds": 0.03519280004547909,
+          "max_seconds": 0.04270330001600087
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00037441228140250304,
+          "normalized_max_error": 0.0001535591373660044,
+          "rmse": 0.00016852685902985602,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 18,
+          "training_relative_l2": 0.0006544096669438366,
+          "rates": [
+            0.03004959071175877,
+            2.000278782105256,
+            59.96144528184804
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.001653023725292302,
+          "timings_seconds": [
+            0.007290699984878302,
+            0.007540900027379394,
+            0.008930799958761781,
+            0.008960899955127388,
+            0.007997300010174513
+          ],
+          "median_seconds": 0.007997300010174513,
+          "min_seconds": 0.007290699984878302,
+          "max_seconds": 0.008960899955127388
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00037441228140250304,
+          "normalized_max_error": 0.0001535591373660044,
+          "rmse": 0.00016852685902985602,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 1172,
+          "training_relative_l2": 0.0006544096669438366,
+          "rates": [
+            0.03004959071175877,
+            2.000278782105256,
+            59.96144528184804
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.001653023725292302,
+          "timings_seconds": [
+            0.501761399966199,
+            0.5293269000248984,
+            0.5153429000056349,
+            0.5665430999943055,
+            0.5308922999538481
+          ],
+          "median_seconds": 0.5293269000248984,
+          "min_seconds": 0.501761399966199,
+          "max_seconds": 0.5665430999943055
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.0003744122802380456,
+          "normalized_max_error": 0.00015355913688842103,
+          "rmse": 0.0001685268598829128,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 1652,
+          "training_relative_l2": 0.0006544096669438354,
+          "rates": [
+            0.03004959071152719,
+            2.000278782045269,
+            59.96144526700403
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016530237175729212,
+          "timings_seconds": [
+            0.42784700001357123,
+            0.4400374999968335,
+            0.44965980004053563,
+            0.4652809000108391,
+            0.43277380004292354
+          ],
+          "median_seconds": 0.4400374999968335,
+          "min_seconds": 0.42784700001357123,
+          "max_seconds": 0.4652809000108391
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.0003744122802380456,
+          "normalized_max_error": 0.00015355913688842103,
+          "rmse": 0.0001685268598829128,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 21,
+          "training_relative_l2": 0.0006544096669438354,
+          "rates": [
+            0.03004959071152719,
+            2.000278782045269,
+            59.96144526700403
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016530237175729212,
+          "timings_seconds": [
+            0.004973499977495521,
+            0.005007700005080551,
+            0.004865900031290948,
+            0.007571200025267899,
+            0.005039399955421686
+          ],
+          "median_seconds": 0.005007700005080551,
+          "min_seconds": 0.004865900031290948,
+          "max_seconds": 0.007571200025267899
+        }
+      }
+    },
+    "noisy_log_seed19": {
+      "time_min": 0.002,
+      "time_max": 400.0,
+      "samples": 600,
+      "rates": [
+        0.03,
+        2.0,
+        60.0
+      ],
+      "amplitudes": [
+        0.7,
+        1.3,
+        0.5
+      ],
+      "noise_sigma": 0.001,
+      "noise_seed": 19,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00015847541177263502,
+          "normalized_max_error": 6.499612521889215e-05,
+          "rmse": 6.637737546537679e-05,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.0007032887779587516,
+          "rates": [
+            0.030025230092466857,
+            2.0008700822585386,
+            60.00309627200507
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030822285641,
+          "timings_seconds": [
+            0.002653400006238371,
+            0.0024499999708496034,
+            0.0025133000453934073,
+            0.0029113999917171896,
+            0.002577100007329136
+          ],
+          "median_seconds": 0.002577100007329136,
+          "min_seconds": 0.0024499999708496034,
+          "max_seconds": 0.0029113999917171896
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00015847541177263502,
+          "normalized_max_error": 6.499612521889215e-05,
+          "rmse": 6.637737546537679e-05,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.0007032887779587516,
+          "rates": [
+            0.030025230092466857,
+            2.0008700822585386,
+            60.00309627200507
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030822285641,
+          "timings_seconds": [
+            0.003181200008839369,
+            0.003251299960538745,
+            0.003200799983460456,
+            0.0045733999577350914,
+            0.003041599993593991
+          ],
+          "median_seconds": 0.003200799983460456,
+          "min_seconds": 0.003041599993593991,
+          "max_seconds": 0.0045733999577350914
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00015847541177263502,
+          "normalized_max_error": 6.499612521889215e-05,
+          "rmse": 6.637737546537679e-05,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.0007032887779587516,
+          "rates": [
+            0.030025230092466857,
+            2.0008700822585386,
+            60.00309627200507
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030822285641,
+          "timings_seconds": [
+            0.0029796999879181385,
+            0.0029119999962858856,
+            0.0030356000061146915,
+            0.0027737999917007983,
+            0.0027546000201255083
+          ],
+          "median_seconds": 0.0029119999962858856,
+          "min_seconds": 0.0027546000201255083,
+          "max_seconds": 0.0030356000061146915
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00015847541177266278,
+          "normalized_max_error": 6.499612521890354e-05,
+          "rmse": 6.63773754653909e-05,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.0007032887779587584,
+          "rates": [
+            0.03002523009246686,
+            2.0008700822585386,
+            60.00309627200495
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030822287862,
+          "timings_seconds": [
+            0.012748899986036122,
+            0.01260560000082478,
+            0.014552599983289838,
+            0.01256420003483072,
+            0.013713000051211566
+          ],
+          "median_seconds": 0.012748899986036122,
+          "min_seconds": 0.01256420003483072,
+          "max_seconds": 0.014552599983289838
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.0001584754118225118,
+          "normalized_max_error": 6.49961252393483e-05,
+          "rmse": 6.637737549892916e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 108,
+          "training_relative_l2": 0.0007032887779587535,
+          "rates": [
+            0.030025230092473244,
+            2.0008700822573897,
+            60.00309627166691
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030824415049,
+          "timings_seconds": [
+            0.04285500000696629,
+            0.03641649999190122,
+            0.03756169998086989,
+            0.03401149995625019,
+            0.03486849996261299
+          ],
+          "median_seconds": 0.03641649999190122,
+          "min_seconds": 0.03401149995625019,
+          "max_seconds": 0.04285500000696629
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.0001584754118225118,
+          "normalized_max_error": 6.49961252393483e-05,
+          "rmse": 6.637737549892916e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 16,
+          "training_relative_l2": 0.0007032887779587535,
+          "rates": [
+            0.030025230092473244,
+            2.0008700822573897,
+            60.00309627166691
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030824415049,
+          "timings_seconds": [
+            0.007865299994591624,
+            0.007123599993065,
+            0.008368199982214719,
+            0.00899169995682314,
+            0.007903399993665516
+          ],
+          "median_seconds": 0.007903399993665516,
+          "min_seconds": 0.007123599993065,
+          "max_seconds": 0.00899169995682314
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.0001584754118225118,
+          "normalized_max_error": 6.49961252393483e-05,
+          "rmse": 6.637737549892916e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 1746,
+          "training_relative_l2": 0.0007032887779587535,
+          "rates": [
+            0.030025230092473244,
+            2.0008700822573897,
+            60.00309627166691
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030824415049,
+          "timings_seconds": [
+            0.8348953000386246,
+            0.8361354999942705,
+            0.8267252999939956,
+            0.7896560999797657,
+            0.7487449000473134
+          ],
+          "median_seconds": 0.8267252999939956,
+          "min_seconds": 0.7487449000473134,
+          "max_seconds": 0.8361354999942705
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00015847541177266278,
+          "normalized_max_error": 6.499612521890354e-05,
+          "rmse": 6.637737546538875e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 2121,
+          "training_relative_l2": 0.0007032887779587477,
+          "rates": [
+            0.030025230092466857,
+            2.0008700822585377,
+            60.00309627200479
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030822285641,
+          "timings_seconds": [
+            0.5590586999896914,
+            0.5505984000046737,
+            0.5517028000322171,
+            0.5152606000192463,
+            0.5136377000017092
+          ],
+          "median_seconds": 0.5505984000046737,
+          "min_seconds": 0.5136377000017092,
+          "max_seconds": 0.5590586999896914
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00015847541177266278,
+          "normalized_max_error": 6.499612521890354e-05,
+          "rmse": 6.637737546538875e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 21,
+          "training_relative_l2": 0.0007032887779587477,
+          "rates": [
+            0.030025230092466857,
+            2.0008700822585377,
+            60.00309627200479
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0008410030822285641,
+          "timings_seconds": [
+            0.004408000037074089,
+            0.005597100011073053,
+            0.005257799988612533,
+            0.004562899994198233,
+            0.004501899995375425
+          ],
+          "median_seconds": 0.004562899994198233,
+          "min_seconds": 0.004408000037074089,
+          "max_seconds": 0.005597100011073053
+        }
+      }
+    },
+    "noisy_log_seed41": {
+      "time_min": 0.002,
+      "time_max": 400.0,
+      "samples": 600,
+      "rates": [
+        0.03,
+        2.0,
+        60.0
+      ],
+      "amplitudes": [
+        0.7,
+        1.3,
+        0.5
+      ],
+      "noise_sigma": 0.001,
+      "noise_seed": 41,
+      "methods": {
+        "LaplaceX default": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00017680426283073203,
+          "normalized_max_error": 7.251340682848129e-05,
+          "rmse": 6.780625592904473e-05,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.0007174347609261013,
+          "rates": [
+            0.030003372284629137,
+            2.00074081052927,
+            60.097928399265314
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399877552434,
+          "timings_seconds": [
+            0.0024975999840535223,
+            0.002918899990618229,
+            0.0022166999988257885,
+            0.0024828999885357916,
+            0.002342900028452277
+          ],
+          "median_seconds": 0.0024828999885357916,
+          "min_seconds": 0.0022166999988257885,
+          "max_seconds": 0.002918899990618229
+        },
+        "LaplaceX fine wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00017680426283073203,
+          "normalized_max_error": 7.251340682848129e-05,
+          "rmse": 6.780625592904473e-05,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.0007174347609261013,
+          "rates": [
+            0.030003372284629137,
+            2.00074081052927,
+            60.097928399265314
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399877552434,
+          "timings_seconds": [
+            0.003061499970499426,
+            0.002950299996882677,
+            0.002888699993491173,
+            0.0033109000069089234,
+            0.0029119999962858856
+          ],
+          "median_seconds": 0.002950299996882677,
+          "min_seconds": 0.002888699993491173,
+          "max_seconds": 0.0033109000069089234
+        },
+        "LaplaceX fine wavelets only": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00017680426283073203,
+          "normalized_max_error": 7.251340682848129e-05,
+          "rmse": 6.780625592904473e-05,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.0007174347609261013,
+          "rates": [
+            0.030003372284629137,
+            2.00074081052927,
+            60.097928399265314
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399877552434,
+          "timings_seconds": [
+            0.0037206000415608287,
+            0.002843800000846386,
+            0.002605799993034452,
+            0.0028229000163264573,
+            0.0027663999935612082
+          ],
+          "median_seconds": 0.0028229000163264573,
+          "min_seconds": 0.002605799993034452,
+          "max_seconds": 0.0037206000415608287
+        },
+        "LaplaceX no wavelets": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00017680426299859775,
+          "normalized_max_error": 7.251340689732871e-05,
+          "rmse": 6.780625596217989e-05,
+          "passes_transform_target": false,
+          "training_relative_l2": 0.000717434760926101,
+          "rates": [
+            0.030003372284633324,
+            2.0007408105290345,
+            60.097928399373174
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399895529165,
+          "timings_seconds": [
+            0.015066099993418902,
+            0.012618000037036836,
+            0.011665400001220405,
+            0.014171299990266562,
+            0.012302600021939725
+          ],
+          "median_seconds": 0.012618000037036836,
+          "min_seconds": 0.011665400001220405,
+          "max_seconds": 0.015066099993418902
+        },
+        "SciPy least_squares auto K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.000176804262745911,
+          "normalized_max_error": 7.251340679369332e-05,
+          "rmse": 6.780625588649921e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 108,
+          "training_relative_l2": 0.0007174347609261003,
+          "rates": [
+            0.030003372284629827,
+            2.000740810528127,
+            60.097928399170755
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399861791708,
+          "timings_seconds": [
+            0.03541029995540157,
+            0.03431680001085624,
+            0.03366980003193021,
+            0.04083309997804463,
+            0.03445879998616874
+          ],
+          "median_seconds": 0.03445879998616874,
+          "min_seconds": 0.03366980003193021,
+          "max_seconds": 0.04083309997804463
+        },
+        "SciPy least_squares known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.000176804262745911,
+          "normalized_max_error": 7.251340679369332e-05,
+          "rmse": 6.780625588649921e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 16,
+          "training_relative_l2": 0.0007174347609261003,
+          "rates": [
+            0.030003372284629827,
+            2.000740810528127,
+            60.097928399170755
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399861791708,
+          "timings_seconds": [
+            0.007644600002095103,
+            0.006665599998086691,
+            0.006600700027775019,
+            0.006989999965298921,
+            0.007903799996711314
+          ],
+          "median_seconds": 0.006989999965298921,
+          "min_seconds": 0.006600700027775019,
+          "max_seconds": 0.007903799996711314
+        },
+        "SciPy TRF auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.000176804262745911,
+          "normalized_max_error": 7.251340679369332e-05,
+          "rmse": 6.780625588649921e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 1173,
+          "training_relative_l2": 0.0007174347609261003,
+          "rates": [
+            0.030003372284629827,
+            2.000740810528127,
+            60.097928399170755
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399861791708,
+          "timings_seconds": [
+            0.5202049000072293,
+            0.49031369999283925,
+            0.4953682000050321,
+            0.5217571000102907,
+            0.5357699999585748
+          ],
+          "median_seconds": 0.5202049000072293,
+          "min_seconds": 0.49031369999283925,
+          "max_seconds": 0.5357699999585748
+        },
+        "SciPy LM auto K BIC": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00017680426299948593,
+          "normalized_max_error": 7.251340689769298e-05,
+          "rmse": 6.780625596246475e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 1657,
+          "training_relative_l2": 0.0007174347609261055,
+          "rates": [
+            0.030003372284633345,
+            2.000740810529039,
+            60.09792839937412
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399895686817,
+          "timings_seconds": [
+            0.41561499994713813,
+            0.40861039998708293,
+            0.40081100002862513,
+            0.431474499986507,
+            0.4444301999756135
+          ],
+          "median_seconds": 0.41561499994713813,
+          "min_seconds": 0.40081100002862513,
+          "max_seconds": 0.4444301999756135
+        },
+        "SciPy LM known K": {
+          "status": "ok",
+          "warnings": [],
+          "max_abs_error": 0.00017680426299948593,
+          "normalized_max_error": 7.251340689769298e-05,
+          "rmse": 6.780625596246475e-05,
+          "passes_transform_target": false,
+          "optimizer_success": true,
+          "total_nfev": 21,
+          "training_relative_l2": 0.0007174347609261055,
+          "rates": [
+            0.030003372284633345,
+            2.000740810529039,
+            60.09792839937412
+          ],
+          "component_count": 3,
+          "correct_component_count": true,
+          "max_rate_relative_error": 0.0016321399895686817,
+          "timings_seconds": [
+            0.0044797000009566545,
+            0.004544899973552674,
+            0.004451800021342933,
+            0.0044571999460458755,
+            0.005088600039016455
+          ],
+          "median_seconds": 0.0044797000009566545,
+          "min_seconds": 0.004451800021342933,
+          "max_seconds": 0.005088600039016455
+        }
+      }
+    }
+  }
+}

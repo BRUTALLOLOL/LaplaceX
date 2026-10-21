@@ -1,643 +1,647 @@
 #include "laplacex/critical.hpp"
-#include "laplacex/utils.hpp"
+#include "laplacex/validation.hpp"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <limits>
+#include <memory>
 #include <numeric>
 #include <stdexcept>
-#include <map>
 #include <vector>
-#include <iostream>   // optional – remove after debugging
 
 namespace laplacex {
+namespace {
+using Vector = std::vector<double>;
+using Matrix = std::vector<Vector>; // contiguous columns
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-// Mexican Hat wavelet psi(x) = (1 - x^2) * exp(-x^2/2)
-static double mexh(double x) {
-    return (1.0 - x * x) * std::exp(-0.5 * x * x);
+void validate_decomposition(const Vector& t, const Vector& f, const DecomposeConfig& c) {
+    validate_samples(t, f);
+    if (c.n_scales < 2 || c.n_log_points < 2 || c.min_ridge_len < 1 ||
+        !std::isfinite(c.scale_min) || !std::isfinite(c.scale_max) ||
+        c.scale_min <= 0 || c.scale_max < c.scale_min ||
+        !std::isfinite(c.ridge_threshold) || c.ridge_threshold < 0 ||
+        c.ridge_threshold > 1 || !std::isfinite(c.noise_sigma) ||
+        !std::isfinite(c.snr_threshold) || c.snr_threshold < 0)
+        throw std::invalid_argument("Invalid decomposition configuration");
+    if (c.wavelet != "mexh")
+        throw std::invalid_argument("Only the mexh wavelet is implemented");
+    if (c.model_selection != "bic" && c.model_selection != "aicc")
+        throw std::invalid_argument("model_selection must be 'bic' or 'aicc'");
 }
 
-// Real Continuous Wavelet Transform at scale a, translation b
-static double cwt_point(
-    const std::vector<double>& x_grid,
-    const std::vector<double>& f_tilde,
-    double a, double b,
-    const std::string& wavelet)
-{
-    int n = static_cast<int>(x_grid.size());
-    double dx = x_grid[1] - x_grid[0]; // uniform grid
-    double inv_sqrt_a = 1.0 / std::sqrt(a);
-    double sum = 0.0;
-
-    for (int i = 0; i < n; ++i) {
-        double xi = (x_grid[i] - b) / a;
-        double psi_val = (wavelet == "mexh") ? mexh(xi) : mexh(xi);
-        sum += f_tilde[i] * psi_val;
-    }
-    return inv_sqrt_a * sum * dx;
+double dot(const Vector& a, const Vector& b) {
+    return std::inner_product(a.begin(), a.end(), b.begin(), 0.0);
 }
 
-// ---------------------------------------------------------------------------
-// Resample to uniform log grid (simple linear interp)
-// ---------------------------------------------------------------------------
-static void to_log_grid(
-    const std::vector<double>& t,
-    const std::vector<double>& f,
-    int n,
-    std::vector<double>& x_grid,
-    std::vector<double>& f_tilde)
-{
-    double x_min = std::log(t.front());
-    double x_max = std::log(t.back());
-    double dx    = (x_max - x_min) / (n - 1);
-
-    x_grid.resize(n);
-    f_tilde.resize(n);
-
-    for (int i = 0; i < n; ++i) {
-        x_grid[i] = x_min + i * dx;
-        double ti = std::exp(x_grid[i]);
-
-        auto it = std::lower_bound(t.begin(), t.end(), ti);
-        if (it == t.end()) {
-            f_tilde[i] = f.back() * ti;
-            continue;
+// Householder reduction preserves the least-squares problem without forming
+// normal equations. LM reuses this reduction when trying different damping.
+void triangularize(Matrix& a, Vector& rhs) {
+    const int n = static_cast<int>(rhs.size()), k = static_cast<int>(a.size());
+    for (int j = 0; j < std::min(n, k); ++j) {
+        double ss = 0;
+        for (int i = j; i < n; ++i) ss += a[j][i]*a[j][i];
+        double norm = std::sqrt(ss);
+        if (norm < 1e-14) continue;
+        double alpha = -std::copysign(norm, a[j][j]);
+        Vector v(n-j);
+        for (int i = j; i < n; ++i) v[i-j] = a[j][i]/norm;
+        v[0] -= alpha/norm;
+        double beta = 2/dot(v, v);
+        for (int q = j+1; q < k; ++q) {
+            double product = 0;
+            for (int i = j; i < n; ++i) product += v[i-j]*a[q][i];
+            for (int i = j; i < n; ++i) a[q][i] -= beta*product*v[i-j];
         }
-        if (it == t.begin()) {
-            f_tilde[i] = f.front() * ti;
-            continue;
-        }
-        std::size_t idx = it - t.begin();
-        double t0 = t[idx-1], t1 = t[idx];
-        double f0 = f[idx-1], f1 = f[idx];
-        double alpha = (ti - t0) / (t1 - t0);
-        double fi = f0 + alpha * (f1 - f0);
-        f_tilde[i] = fi * ti;
+        double product = 0;
+        for (int i = j; i < n; ++i) product += v[i-j]*rhs[i];
+        for (int i = j; i < n; ++i) rhs[i] -= beta*product*v[i-j];
+        a[j][j] = alpha;
     }
+    // The reflector's tail is workspace, not part of R.
+    for (int j = 0; j < k; ++j)
+        std::fill(a[j].begin()+std::min(j+1, n), a[j].end(), 0);
 }
 
-// ---------------------------------------------------------------------------
-// Linear least squares solver for small systems (normal equations + Gauss elim)
-// ---------------------------------------------------------------------------
-static std::vector<double> solve_normal_eq(
-    const std::vector<std::vector<double>>& A,   // A^T A
-    const std::vector<double>& b)                // A^T f
-{
-    int n = static_cast<int>(A.size());
-    if (n == 0) return {};
-    // Augmented matrix
-    std::vector<std::vector<double>> aug(n, std::vector<double>(n+1, 0.0));
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) aug[i][j] = A[i][j];
-        aug[i][n] = b[i];
+// Scaled Householder QR: no normal equations, including the damped LM solve.
+Vector least_squares(Matrix a, Vector rhs) {
+    const int n = static_cast<int>(rhs.size()), k = static_cast<int>(a.size());
+    Vector scaling(k), result(k, 0);
+    for (int j = 0; j < k; ++j) {
+        scaling[j] = std::sqrt(dot(a[j], a[j]));
+        if (scaling[j] > 0)
+            for (auto& value : a[j]) value /= scaling[j];
     }
+    triangularize(a, rhs);
+    for (int j = std::min(n, k)-1; j >= 0; --j) {
+        if (std::abs(a[j][j]) < 1e-13) continue;
+        double value = rhs[j];
+        for (int q = j+1; q < k; ++q) value -= a[q][j]*result[q];
+        result[j] = value/a[j][j];
+    }
+    for (int j = 0; j < k; ++j)
+        result[j] = scaling[j] > 0 ? result[j]/scaling[j] : 0;
+    return result;
+}
 
-    // Gaussian elimination with partial pivoting
-    for (int col = 0; col < n; ++col) {
-        int pivot = col;
-        double max_val = std::abs(aug[col][col]);
-        for (int row = col+1; row < n; ++row) {
-            if (std::abs(aug[row][col]) > max_val) {
-                max_val = std::abs(aug[row][col]);
-                pivot = row;
+Matrix basis(const Vector& t, const Vector& rates) {
+    Matrix e(rates.size(), Vector(t.size()));
+    for (std::size_t j = 0; j < rates.size(); ++j)
+        for (std::size_t i = 0; i < t.size(); ++i) e[j][i] = std::exp(-rates[j]*t[i]);
+    return e;
+}
+
+struct Fit {
+    Vector rates, amplitudes, residual;
+    Matrix e;
+    double rss = std::numeric_limits<double>::infinity();
+};
+
+void evaluate(Fit& fit, const Vector& t, const Vector& y) {
+    fit.e = basis(t, fit.rates);
+    fit.residual = y;
+    long double rss = 0;
+    for (std::size_t i = 0; i < t.size(); ++i) {
+        long double prediction = 0;
+        for (std::size_t j = 0; j < fit.rates.size(); ++j)
+            prediction += static_cast<long double>(fit.amplitudes[j])*fit.e[j][i];
+        fit.residual[i] = y[i]-static_cast<double>(prediction);
+        rss += static_cast<long double>(fit.residual[i])*fit.residual[i];
+    }
+    fit.rss = static_cast<double>(rss);
+}
+
+Fit refine(const Vector& t, const Vector& y, Vector rates, bool optimize) {
+    Fit fit;
+    fit.rates = std::move(rates);
+    fit.e = basis(t, fit.rates);
+    fit.amplitudes = least_squares(fit.e, y);
+    evaluate(fit, t, y);
+    if (!optimize) return fit;
+    const int n = static_cast<int>(t.size()), k = static_cast<int>(fit.rates.size());
+    const double low = .005/t.back(), high = 8/t.front();
+    double damping = 1e-3;
+    const double floor = 1e-30*dot(y, y);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        Matrix jacobian(2*k, Vector(n));
+        Vector norms(2*k);
+        for (int j = 0; j < k; ++j)
+            for (int i = 0; i < n; ++i) {
+                jacobian[j][i] = fit.e[j][i];
+                jacobian[j+k][i] = -fit.amplitudes[j]*fit.rates[j]*t[i]*fit.e[j][i];
             }
+        for (int j = 0; j < 2*k; ++j) {
+            norms[j] = std::max(1e-100, std::sqrt(dot(jacobian[j], jacobian[j])));
+            for (auto& value : jacobian[j]) value /= norms[j];
         }
-        if (max_val < 1e-15) continue; // singular – leave as zero
-        if (pivot != col) std::swap(aug[col], aug[pivot]);
+        Vector projected = fit.residual;
+        int rows = n;
+        if (k > 1) {
+            triangularize(jacobian, projected);
+            rows = 2*k;
+            for (auto& column : jacobian) column.resize(rows);
+            projected.resize(rows);
+        }
+        bool accepted = false;
+        const double previous = fit.rss;
+        for (int trial = 0; trial < 12; ++trial) {
+            Matrix augmented = jacobian;
+            Vector rhs = projected;
+            rhs.resize(rows+2*k, 0);
+            for (int j = 0; j < 2*k; ++j) {
+                augmented[j].resize(rows+2*k, 0);
+                augmented[j][rows+j] = std::sqrt(damping);
+            }
+            auto step = least_squares(std::move(augmented), std::move(rhs));
+            Fit candidate = fit;
+            double log_step = 0;
+            for (int j = 0; j < k; ++j)
+                log_step = std::max(log_step, std::abs(step[j+k]/norms[j+k]));
+            double factor = log_step > 1.5 ? 1.5/log_step : 1;
+            for (int j = 0; j < k; ++j) {
+                candidate.amplitudes[j] += factor*step[j]/norms[j];
+                candidate.rates[j] = std::clamp(
+                    fit.rates[j]*std::exp(factor*step[j+k]/norms[j+k]), low, high);
+            }
+            evaluate(candidate, t, y);
+            if (std::isfinite(candidate.rss) && candidate.rss < fit.rss) {
+                fit = std::move(candidate);
+                damping = std::max(1e-16, damping*.15);
+                accepted = true;
+                break;
+            }
+            damping = std::min(1e12, damping*8);
+        }
+        if (!accepted || fit.rss <= floor) break;
+        if (previous-fit.rss <= 2e-15*fit.rss) break;
+    }
+    // Refit amplitudes at the final rates without a damping penalty.
+    auto amplitudes = least_squares(fit.e, y);
+    Fit polished = fit;
+    polished.amplitudes = std::move(amplitudes);
+    evaluate(polished, t, y);
+    if (polished.rss < fit.rss) fit = std::move(polished);
+    return fit;
+}
 
-        double div = aug[col][col];
-        for (int j = col; j <= n; ++j) aug[col][j] /= div;
+double median(Vector v) {
+    if (v.empty()) return 0;
+    auto middle = v.begin()+v.size()/2;
+    std::nth_element(v.begin(), middle, v.end());
+    double value = *middle;
+    if (v.size()%2 == 0) value = .5*(value+*std::max_element(v.begin(), middle));
+    return value;
+}
+
+// Local linear interpolation removes trends even on irregular time grids.
+double estimate_noise(const Vector& t, const Vector& y) {
+    Vector differences;
+    for (std::size_t i = 1; i+1 < t.size(); ++i) {
+        double weight = (t[i]-t[i-1])/(t[i+1]-t[i-1]);
+        differences.push_back((y[i]-(1-weight)*y[i-1]-weight*y[i+1])
+                             /std::sqrt(1+(1-weight)*(1-weight)+weight*weight));
+    }
+    double center = median(differences);
+    for (auto& v : differences) v = std::abs(v-center);
+    return median(std::move(differences))/.6744897501960817;
+}
+
+struct Candidate { double rate, strength; int votes = 1; };
+
+// Mexican-Hat zero crossings locate extrema of the Gaussian-smoothed log
+// derivative. Constant edge extension and exact DC cancellation remove the
+// artificial boundary modes that arose from transforming t*f(t).
+struct LogWavelets {
+    struct Kernel { Vector derivative, mexican, noise_norm; double scale; };
+    Vector x, alpha;
+    std::vector<std::size_t> left;
+    std::vector<Kernel> kernels;
+    const DecomposeConfig& cfg;
+    double dx;
+    Vector noise_weights;
+
+    LogWavelets(const Vector& t, const DecomposeConfig& c) : cfg(c) {
+        int n = c.n_log_points;
+        noise_weights.resize(t.size());
+        dx = (std::log(t.back())-std::log(t.front()))/(n-1);
+        x.resize(n); alpha.resize(n); left.resize(n);
+        std::size_t j = 0;
         for (int i = 0; i < n; ++i) {
-            if (i == col) continue;
-            double factor = aug[i][col];
-            for (int j = col; j <= n; ++j) aug[i][j] -= factor * aug[col][j];
+            x[i] = std::log(t.front())+i*dx;
+            double ti = std::exp(x[i]);
+            while (j+2 < t.size() && t[j+1] < ti) ++j;
+            left[i] = j;
+            alpha[i] = std::clamp((ti-t[j])/(t[j+1]-t[j]), 0.0, 1.0);
+        }
+        for (int jscale = 0; jscale < c.n_scales; ++jscale) {
+            double a = std::exp(std::log(c.scale_min)+(std::log(c.scale_max)
+                               -std::log(c.scale_min))*jscale/(c.n_scales-1));
+            a = std::max(a, 1.25*dx);
+            int radius = static_cast<int>(std::ceil(std::min(double(n-1), 4.5*(a/dx))));
+            Kernel kernel; kernel.scale = a;
+            kernel.derivative.resize(radius+1); kernel.mexican.resize(radius+1);
+            for (int d = 1; d <= radius; ++d) {
+                double u = d*dx/a;
+                double gaussian = std::exp(-.5*u*u)*dx/(a*std::sqrt(2*std::acos(-1.0)));
+                kernel.derivative[d] = d*dx/(a*a)*gaussian;
+                kernel.mexican[d] = (1-u*u)*gaussian;
+            }
+            // Propagate white sample noise through interpolation AND filtering.
+            // Oversampled early times share observations; treating interpolated
+            // grid values as independent gives incorrect detection thresholds.
+            // Only crossings surviving the relative threshold need a noise
+            // norm. Cache those exact variances across residual searches.
+            kernel.noise_norm.assign(n, -1);
+            kernels.push_back(std::move(kernel));
         }
     }
 
-    std::vector<double> x(n);
-    for (int i = 0; i < n; ++i) x[i] = aug[i][n];
-    return x;
-}
+    double noise_norm(Kernel& kernel, int i) {
+        if (kernel.noise_norm[i] < 0) {
+            int n = static_cast<int>(x.size());
+            int radius = static_cast<int>(kernel.derivative.size())-1;
+            auto& weights = noise_weights;
+            std::size_t first = left[std::max(0, i-radius)];
+            std::size_t last = left[std::min(n-1, i+radius)]+1;
+            std::fill(weights.begin()+first, weights.begin()+last+1, 0);
+            for (int d = 1; d <= radius; ++d) {
+                int l = std::max(0, i-d), r = std::min(n-1, i+d);
+                double w = kernel.derivative[d];
+                weights[left[l]] += w*(1-alpha[l]);
+                weights[left[l]+1] += w*alpha[l];
+                weights[left[r]] -= w*(1-alpha[r]);
+                weights[left[r]+1] -= w*alpha[r];
+            }
+            double variance = 0;
+            for (std::size_t j = first; j <= last; ++j) variance += weights[j]*weights[j];
+            kernel.noise_norm[i] = std::sqrt(variance);
+        }
+        return kernel.noise_norm[i];
+    }
 
-// ---------------------------------------------------------------------------
-// Refine component rates and amplitudes via alternating least squares
-// ---------------------------------------------------------------------------
-static void refine_components_als(
-    std::vector<ExponentialComponent>& components,
-    const std::vector<double>& t,
-    const std::vector<double>& f)
-{
-    if (components.empty()) return;
-
-    const int n_times = static_cast<int>(t.size());
-    const int n_comp  = static_cast<int>(components.size());
-
-    const int outer_iter = 3;
-    const int ternary_iter = 40;
-
-    for (int iter = 0; iter < outer_iter; ++iter) {
-        for (int k = 0; k < n_comp; ++k) {
-            // Skip oscillatory components in rate search — they need different
-            // (damped-cosine) basis functions. Their amplitudes are still
-            // updated in the global amplitude solve at the end of each outer pass.
-            if (components[k].frequency != 0.0) continue;
-
-            double rate_init = components[k].rate;
-            if (rate_init <= 0.0) rate_init = 0.1;
-
-            double lo = rate_init * 0.25;
-            double hi = rate_init * 4.0;
-            if (lo < 1e-12) lo = 1e-12;   // avoid zero rate
-
-            // Ternary search for best rate of component k
-            auto rss_for_rate = [&](double r) -> double {
-                // Build design matrix for current set of rates (with candidate r for k)
-                std::vector<double> rates = std::vector<double>(n_comp);
-                for (int i = 0; i < n_comp; ++i) rates[i] = components[i].rate;
-                rates[k] = r;
-
-                // Form A (n_times x n_comp)
-                std::vector<std::vector<double>> A(n_times, std::vector<double>(n_comp, 0.0));
-                for (int i = 0; i < n_times; ++i) {
-                    for (int j = 0; j < n_comp; ++j) {
-                        A[i][j] = std::exp(-rates[j] * t[i]);
+    std::vector<Candidate> candidates(const Vector& residual, double sigma) {
+        int n = static_cast<int>(x.size());
+        Vector values(n);
+        for (int i = 0; i < n; ++i) {
+            auto j = left[i];
+            values[i] = residual[j]*(1-alpha[i])+residual[j+1]*alpha[i];
+        }
+        const int padding = static_cast<int>(kernels.back().derivative.size())-1;
+        Vector extended(n+2*padding, values.back());
+        std::fill(extended.begin(), extended.begin()+padding, values.front());
+        std::copy(values.begin(), values.end(), extended.begin()+padding);
+        std::vector<Candidate> ridges;
+        for (auto& kernel : kernels) {
+            Vector derivative(n, 0), mexican(n, 0);
+            int radius = static_cast<int>(kernel.derivative.size())-1;
+            for (int i = 0; i < n; ++i) {
+                for (int d = 1; d <= radius; ++d) {
+                    double l = extended[padding+i-d], r = extended[padding+i+d];
+                    derivative[i] += kernel.derivative[d]*(l-r);
+                    mexican[i] += kernel.mexican[d]*(l+r-2*values[i]);
+                }
+            }
+            double maximum = 0;
+            for (double value : derivative) maximum = std::max(maximum, std::abs(value));
+            if (maximum == 0) continue;
+            std::vector<int> used;
+            for (int i = 1; i+1 < n; ++i) {
+                double sign = derivative[i] >= 0 ? 1 : -1;
+                if (std::abs(derivative[i]) < cfg.ridge_threshold*maximum ||
+                    sign*mexican[i] < 0 || sign*mexican[i+1] > 0 ||
+                    mexican[i] == mexican[i+1]) continue;
+                if (std::abs(derivative[i]) < cfg.snr_threshold*sigma*noise_norm(kernel, i)) continue;
+                double fraction = mexican[i]/(mexican[i]-mexican[i+1]);
+                double log_rate = -(x[i]+fraction*dx)-.5*kernel.scale*kernel.scale;
+                if (!std::isfinite(log_rate)) continue;
+                // Link from fine to coarse, retaining branches that merge later.
+                int best = -1; double distance = .3;
+                for (int k = 0; k < static_cast<int>(ridges.size()); ++k) {
+                    double delta = std::abs(std::log(ridges[k].rate)-log_rate);
+                    if (delta < distance &&
+                        std::find(used.begin(), used.end(), k) == used.end()) {
+                        best = k; distance = delta;
                     }
                 }
-
-                // Compute A^T A and A^T f
-                std::vector<std::vector<double>> ATA(n_comp, std::vector<double>(n_comp, 0.0));
-                std::vector<double> ATf(n_comp, 0.0);
-                for (int i = 0; i < n_times; ++i) {
-                    for (int p = 0; p < n_comp; ++p) {
-                        double aip = A[i][p];
-                        for (int q = 0; q < n_comp; ++q) {
-                            ATA[p][q] += aip * A[i][q];
-                        }
-                        ATf[p] += aip * f[i];
-                    }
-                }
-
-                // Solve for amplitudes
-                std::vector<double> amps = solve_normal_eq(ATA, ATf);
-
-                // Compute RSS
-                double rss = 0.0;
-                for (int i = 0; i < n_times; ++i) {
-                    double pred = 0.0;
-                    for (int j = 0; j < n_comp; ++j)
-                        pred += amps[j] * A[i][j];
-                    double diff = pred - f[i];
-                    rss += diff * diff;
-                }
-                return rss;
-            };
-
-            // Ternary search
-            for (int step = 0; step < ternary_iter; ++step) {
-                double m1 = lo + (hi - lo) / 3.0;
-                double m2 = hi - (hi - lo) / 3.0;
-                double f1 = rss_for_rate(m1);
-                double f2 = rss_for_rate(m2);
-                if (f1 < f2) {
-                    hi = m2;
+                if (best < 0) {
+                    ridges.push_back({std::exp(log_rate), std::abs(derivative[i]), 1});
+                    used.push_back(static_cast<int>(ridges.size()-1));
                 } else {
-                    lo = m1;
+                    auto& ridge = ridges[best];
+                    ++ridge.votes;
+                    // Fine-scale localization has less smoothing bias.
+                    ridge.strength = std::max(ridge.strength, std::abs(derivative[i]));
+                    used.push_back(best);
                 }
             }
-            double best_rate = (lo + hi) * 0.5;
-            components[k].rate = best_rate;
         }
-
-        // After refining all components, recompute amplitudes for all simultaneously
-        // (using updated rates)
-        std::vector<double> rates(n_comp);
-        for (int j = 0; j < n_comp; ++j) rates[j] = components[j].rate;
-
-        std::vector<std::vector<double>> A(n_times, std::vector<double>(n_comp));
-        for (int i = 0; i < n_times; ++i)
-            for (int j = 0; j < n_comp; ++j)
-                A[i][j] = std::exp(-rates[j] * t[i]);
-
-        std::vector<std::vector<double>> ATA(n_comp, std::vector<double>(n_comp, 0.0));
-        std::vector<double> ATf(n_comp, 0.0);
-        for (int i = 0; i < n_times; ++i) {
-            for (int p = 0; p < n_comp; ++p) {
-                double aip = A[i][p];
-                for (int q = 0; q < n_comp; ++q) ATA[p][q] += aip * A[i][q];
-                ATf[p] += aip * f[i];
-            }
-        }
-        std::vector<double> new_amps = solve_normal_eq(ATA, ATf);
-        for (int j = 0; j < n_comp; ++j) {
-            components[j].amplitude = new_amps[j];
-            if (components[j].rate > 0.0) {
-                components[j].decay_time = 1.0 / components[j].rate;
-                components[j].log_time   = std::log(components[j].decay_time);
-            } else {
-                components[j].decay_time = std::numeric_limits<double>::infinity();
-                components[j].log_time   = -std::numeric_limits<double>::infinity();
-            }
-        }
+        ridges.erase(std::remove_if(ridges.begin(), ridges.end(), [&](const Candidate& r) {
+            return r.votes < cfg.min_ridge_len;
+        }), ridges.end());
+        return ridges;
     }
+};
 
-    // Final recompute amplitudes one last time (already done in the last inner loop)
-    // Re‑normalise significance by absolute amplitudes
-    double sum_abs = 0.0;
-    for (const auto& c : components) sum_abs += std::abs(c.amplitude);
-    if (sum_abs > 0.0) {
-        for (auto& c : components)
-            c.significance = std::abs(c.amplitude) / sum_abs;
+Matrix orthonormal(const Matrix& e) {
+    Matrix q;
+    for (auto v : e) {
+        for (int pass = 0; pass < 2; ++pass)
+            for (const auto& column : q) {
+                double projection = dot(v, column);
+                for (std::size_t i = 0; i < v.size(); ++i) v[i] -= projection*column[i];
+            }
+        double norm = std::sqrt(dot(v, v));
+        if (norm < 1e-12) continue;
+        for (auto& value : v) value /= norm;
+        q.push_back(std::move(v));
     }
+    return q;
 }
 
-// ---------------------------------------------------------------------------
-// decompose
-// ---------------------------------------------------------------------------
-std::vector<ExponentialComponent> decompose(
-    const std::vector<double>& t,
-    const std::vector<double>& f,
-    const DecomposeConfig& cfg)
-{
-    if (t.size() != f.size() || t.size() < 4)
-        throw std::invalid_argument("laplacex::decompose: need at least 4 (t,f) pairs");
-    for (double ti : t)
-        if (ti <= 0.0)
-            throw std::domain_error("laplacex::decompose: all t values must be > 0");
-
-    // 1. Log-plane resampling
-    std::vector<double> x_grid, f_tilde;
-    to_log_grid(t, f, cfg.n_log_points, x_grid, f_tilde);
-
-    int n = cfg.n_log_points;
-    double x_min = x_grid.front();
-    double x_max = x_grid.back();
-
-    // 2. Build scale array (log-spaced)
-    int ns = cfg.n_scales;
-    std::vector<double> scales(ns);
-    double log_amin = std::log(cfg.scale_min);
-    double log_amax = std::log(cfg.scale_max);
-    for (int j = 0; j < ns; ++j)
-        scales[j] = std::exp(log_amin + j * (log_amax - log_amin) / (ns - 1));
-
-    // 3. Compute CWT matrix W[j][i] = W(scale_j, x_i)
-    std::vector<std::vector<double>> W(ns, std::vector<double>(n, 0.0));
-    double W_max = 0.0;
-
-    for (int j = 0; j < ns; ++j) {
-        for (int i = 0; i < n; ++i) {
-            W[j][i] = cwt_point(x_grid, f_tilde, scales[j], x_grid[i], cfg.wavelet);
-            W_max = std::max(W_max, std::abs(W[j][i]));
-        }
-    }
-
-    if (W_max == 0.0) return {}; // flat signal
-
-    // 4. Noise estimation from finest scales
-    double noise_sigma = cfg.noise_sigma;
-    if (noise_sigma < 0.0) {
-        std::vector<double> fine(W[0].begin(), W[0].end());
-        for (auto& v : fine) v = std::abs(v);
-        std::sort(fine.begin(), fine.end());
-        noise_sigma = fine[fine.size()/2] / 0.6745;
-    }
-
-    // 5. Find local maxima in x for each scale → ridge points
-    std::vector<std::vector<std::pair<int,double>>> ridges(ns);
-    for (int j = 0; j < ns; ++j) {
-        for (int i = 1; i + 1 < n; ++i) {
-            double va = std::abs(W[j][i-1]);
-            double vb = std::abs(W[j][i]);
-            double vc = std::abs(W[j][i+1]);
-            if (vb > va && vb >= vc && vb > cfg.ridge_threshold * W_max) {
-                ridges[j].push_back({i, vb});
-            }
-        }
-    }
-
-    // 6. Connect ridge points across scales → ridge lines
-    struct RidgeLine {
-        std::vector<std::pair<int,int>> points; // (scale_idx, x_idx)
-        double peak_energy = 0.0;
-        int    peak_scale  = 0;
-        int    peak_x      = 0;
-    };
-
-    std::vector<RidgeLine> lines;
-    // Start from coarsest scale
-    for (auto& [xi, energy] : ridges[ns-1]) {
-        RidgeLine line;
-        line.points.push_back({ns-1, xi});
-        line.peak_energy = energy;
-        line.peak_scale  = ns-1;
-        line.peak_x      = xi;
-
-        int cur_x = xi;
-        for (int j = ns-2; j >= 0; --j) {
-            int best_i = -1;
-            double best_d = 1e9;
-            for (auto& [ri, re] : ridges[j]) {
-                double d = std::abs(ri - cur_x);
-                if (d < best_d && d <= 3) { best_d = d; best_i = ri; }
-            }
-            if (best_i < 0) break;
-            line.points.push_back({j, best_i});
-            double E = std::abs(W[j][best_i]);
-            if (E > line.peak_energy) {
-                line.peak_energy = E;
-                line.peak_scale  = j;
-                line.peak_x      = best_i;
-            }
-            cur_x = best_i;
-        }
-
-        if (static_cast<int>(line.points.size()) >= cfg.min_ridge_len)
-            lines.push_back(std::move(line));
-    }
-
-    // 7. Extract component parameters from each ridge line
-    std::vector<ExponentialComponent> components;
-    double total_energy = 0.0;
-
-    for (auto& line : lines) {
-        int j = line.peak_scale;
-        int i = line.peak_x;
-
-        double x_k = x_grid[i];
-        double t_k = std::exp(x_k);
-        double A_k = line.peak_energy * scales[j]; // un-normalised
-
-        // SNR check
-        if (A_k < cfg.snr_threshold * noise_sigma) continue;
-
-        ExponentialComponent comp;
-        comp.log_time   = x_k;
-        comp.decay_time = t_k;
-        comp.rate       = (t_k > 0) ? 1.0 / t_k : 0.0;
-        comp.amplitude  = A_k;
-        comp.significance = A_k; // will normalise below
-
-        // Oscillation detection – count sign changes of W within a LOCAL window.
-        // Capped at 20 grid points each side to avoid false positives: at coarse
-        // scales the uncapped window spans the whole grid and the Mexican Hat
-        // CWT always shows sign changes that are NOT true signal oscillations.
-        int win = std::min(static_cast<int>(scales[j] / (x_grid[1]-x_grid[0]) * 2), 20);
-        int cnt = 0;
-        for (int k = std::max(0,i-win); k+1 < std::min(n, i+win); ++k) {
-            if (W[j][k] * W[j][k+1] < 0) ++cnt;
-        }
-        if (cnt >= 2) {
-            comp.frequency = cnt * M_PI / (2.0 * scales[j]);
-        }
-
-        total_energy += A_k;
-        components.push_back(comp);
-    }
-
-    // 8. Normalise significance
-    if (total_energy > 0) {
-        for (auto& c : components)
-            c.significance = c.significance / total_energy;
-    }
-
-    // 9. Sort by significance descending
-    std::sort(components.begin(), components.end(),
-        [](const ExponentialComponent& a, const ExponentialComponent& b) {
-            return a.significance > b.significance;
-        });
-
-    // ---- Refine rates and amplitudes (ALS) ----
-    // Skipped when disable_als=true (used by decompose_deflate so that the
-    // unbiased CWT-ridge rate drives each deflation subtraction; joint ALS
-    // runs once at the end of decompose_deflate on the original signal).
-    if (!cfg.disable_als)
-        refine_components_als(components, t, f);
-    // Re‑sort after refinement (significance was updated inside refine)
-    std::sort(components.begin(), components.end(),
-        [](const ExponentialComponent& a, const ExponentialComponent& b) {
-            return a.significance > b.significance;
-        });
-
-    // 10. Optional AIC pruning (using refined components)
-    if (cfg.use_aic && components.size() > 1) {
-        auto rss = [&](std::size_t k) {
-            auto sub = std::vector<ExponentialComponent>(components.begin(), components.begin()+k);
-            auto r   = reconstruct(sub, t);
-            double s = 0;
-            for (std::size_t idx = 0; idx < t.size(); ++idx) {
-                double d = r[idx] - f[idx];
-                s += d * d;
-            }
-            return s;
-        };
-
-        int best_k = 1;
-        double best_aic = std::log(rss(1) / t.size()) + 2.0 * 3;
-        for (std::size_t k = 2; k <= components.size(); ++k) {
-            double a = std::log(rss(k) / t.size()) + 2.0 * 3 * k;
-            if (a < best_aic) { best_aic = a; best_k = static_cast<int>(k); }
-        }
-        components.resize(best_k);
-    }
-
-    return components;
+double score(const Fit& fit, int n, double floor, const DecomposeConfig& cfg) {
+    double parameters = 2*fit.rates.size();
+    if (cfg.model_selection == "bic")
+        return n*std::log(std::max(fit.rss, floor)/n)+parameters*std::log(double(n));
+    // Compare independently refitted nested models, not truncated amplitudes.
+    return n*std::log(std::max(fit.rss, floor)/n)+2*parameters
+           +2*parameters*(parameters+1)/std::max(1.0, n-parameters-1);
 }
 
-// ---------------------------------------------------------------------------
-// decompose_deflate – iteratively finds components by deflation
-// ---------------------------------------------------------------------------
-std::vector<ExponentialComponent> decompose_deflate(
-    const std::vector<double>& t,
-    const std::vector<double>& f,
-    const DecomposeConfig& cfg,
-    int max_components,
-    double energy_tol)
-{
-    if (max_components <= 0) max_components = 5;
-    if (energy_tol <= 0.0) energy_tol = 1e-6;
+Fit prune(Fit current, const Vector& t, const Vector& y, double sigma,
+          const DecomposeConfig& cfg, double floor) {
+    if (!cfg.use_aic) return current;
+    bool removed = true;
+    while (removed && current.rates.size() > 1) {
+        removed = false;
+        for (std::size_t j = 0; j < current.rates.size(); ++j) {
+            bool unsupported = false;
+            bool weak = std::abs(current.amplitudes[j]) <=
+                        std::max(1e-10, cfg.snr_threshold*sigma);
+            // Conditional amplitude uncertainty flags overlapping/cancelling
+            // modes, including large amplitudes with nearly dependent columns.
+            double fit_sigma = std::min(sigma, std::sqrt(current.rss/
+                std::max(1.0, double(t.size())-2*current.rates.size())));
+            if (fit_sigma > 1e-12) {
+                Matrix others;
+                for (std::size_t k = 0; k < current.rates.size(); ++k) {
+                    if (k != j) others.push_back(current.e[k]);
+                    Vector derivative(t.size());
+                    for (std::size_t i = 0; i < t.size(); ++i)
+                        derivative[i] = current.rates[k]*t[i]*current.e[k][i];
+                    others.push_back(std::move(derivative));
+                }
+                auto q = orthonormal(others);
+                auto innovation = current.e[j];
+                for (int pass = 0; pass < 2; ++pass)
+                    for (const auto& column : q) {
+                        double product = dot(innovation, column);
+                        for (std::size_t i = 0; i < t.size(); ++i)
+                            innovation[i] -= product*column[i];
+                    }
+                double precision = std::sqrt(dot(innovation, innovation));
+                if (std::abs(current.amplitudes[j])*precision <
+                    std::max(cfg.snr_threshold, std::sqrt(2*std::log(double(t.size()))))*fit_sigma) {
+                    weak = true;
+                    // Outside the observed characteristic-time window, A is
+                    // an extrapolation back through more than one e-fold.
+                    // Require it to be identifiable. In-window overlapping
+                    // modes still use a refitted information-criterion test.
+                    unsupported = current.rates[j]*t.front() > 1;
+                }
+            }
+            for (std::size_t k = 0; k < current.rates.size(); ++k)
+                if (k != j && std::abs(std::log(current.rates[j]/current.rates[k])) < .1)
+                    weak = true;
+            if (!weak) continue;
+            auto rates = current.rates; rates.erase(rates.begin()+j);
+            auto sub = refine(t, y, std::move(rates), !cfg.disable_als);
+            // Near a sampling boundary a fitted amplitude can be almost
+            // unconstrained even when its residual reduction passes BIC.
+            // Enforce the conditional uncertainty test, rather than merely
+            // using it to suggest a deletion that BIC can veto.
+            if (unsupported || score(sub, static_cast<int>(t.size()), floor, cfg) <
+                score(current, static_cast<int>(t.size()), floor, cfg)) {
+                current = std::move(sub); removed = true; break;
+            }
+        }
+    }
+    return current;
+}
 
+std::vector<ExponentialComponent> fit_signal(const Vector& t, const Vector& f,
+        const DecomposeConfig& cfg, int budget, double energy_tol, bool wavelets) {
+    validate_decomposition(t, f, cfg);
+    if (budget < 1 || budget > 32 || !std::isfinite(energy_tol) || energy_tol <= 0 || energy_tol >= 1)
+        throw std::invalid_argument("Need 1 <= max_components <= 32 and 0 < energy_tol < 1");
     const int n = static_cast<int>(t.size());
-    const double original_energy = std::inner_product(f.begin(), f.end(), f.begin(), 0.0);
-    if (original_energy < 1e-30) return {};
-
-    // -----------------------------------------------------------------------
-    // Helper: solve the K-component linear LS problem on the original signal.
-    //
-    //   min_{A_0..A_{K-1}} || f - Σ A_k exp(-rates[k] t) ||²
-    //
-    // Returns {amplitudes, RSS}.  Exact closed-form solution via Gaussian
-    // elimination on the K×K normal equations — cannot get stuck in local
-    // minima, unlike iterative ALS.
-    // -----------------------------------------------------------------------
-    auto solve_ls = [&](const std::vector<double>& rates)
-        -> std::pair<std::vector<double>, double>
-    {
-        int K = static_cast<int>(rates.size());
-        std::vector<std::vector<double>> G(K, std::vector<double>(K, 0.0));
-        std::vector<double> h(K, 0.0);
-        for (int i = 0; i < n; ++i) {
-            std::vector<double> e(K);
-            for (int k = 0; k < K; ++k) e[k] = std::exp(-rates[k] * t[i]);
-            for (int k = 0; k < K; ++k) {
-                h[k] += f[i] * e[k];
-                for (int l = 0; l < K; ++l) G[k][l] += e[k] * e[l];
+    budget = std::min(budget, (n-1)/2);
+    double amplitude_scale = 0;
+    for (double value : f) amplitude_scale = std::max(amplitude_scale, std::abs(value));
+    if (amplitude_scale == 0) return {};
+    Vector y = f;
+    for (auto& value : y) value /= amplitude_scale;
+    const double energy = dot(y, y), floor = 1e-28*energy;
+    const double sigma = cfg.noise_sigma >= 0 ? cfg.noise_sigma/amplitude_scale : estimate_noise(t, y);
+    const double mean = std::accumulate(y.begin(), y.end(), 0.0)/n;
+    double centered = 0, time_mean = std::accumulate(t.begin(), t.end(), 0.0)/n;
+    double covariance = 0, time_variance = 0;
+    for (int i = 0; i < n; ++i) {
+        centered += (y[i]-mean)*(y[i]-mean);
+        covariance += (t[i]-time_mean)*(y[i]-mean);
+        time_variance += (t[i]-time_mean)*(t[i]-time_mean);
+    }
+    if (centered <= std::max(floor, (n+3*std::sqrt(2.0*n))*sigma*sigma) &&
+        std::abs(covariance) <= std::max(1e-14, cfg.snr_threshold*sigma*std::sqrt(time_variance))) {
+        if (std::abs(mean) <= std::max(cfg.snr_threshold, std::sqrt(2*std::log(double(n))))
+                             *sigma/std::sqrt(double(n))) return {};
+        ExponentialComponent constant;
+        constant.amplitude = mean*amplitude_scale;
+        constant.decay_time = constant.log_time = std::numeric_limits<double>::infinity();
+        constant.significance = 1;
+        return {constant};
+    }
+    // Exact single-mode shortcut, shared by wavelet and rate-grid routes.
+    // A cheap log-linearity screen is followed by a fit on EVERY observation;
+    // accept only at the common numerical floor, never at a noise tolerance.
+    if (!cfg.disable_als && y.front() != 0) {
+        int last = n-1;
+        while (last > 0 && std::abs(y[last]) < 1e-4) --last;
+        if (last > 0 && y.front()*y[last] > 0) {
+            double rate = -std::log(std::abs(y[last]/y.front()))/(t[last]-t.front());
+            bool exponential = rate > 0 && rate*t.front() <= 8;
+            for (int j = 1; j < 16 && exponential; ++j) {
+                int i = j*last/16;
+                double prediction = y.front()*std::exp(-rate*(t[i]-t.front()));
+                if (std::abs(prediction-y[i]) > 1e-10) exponential = false;
+            }
+            if (exponential) {
+                auto single = refine(t, y, {rate}, true);
+                if (single.rss <= floor) {
+                    ExponentialComponent component;
+                    component.rate = single.rates[0];
+                    component.amplitude = single.amplitudes[0]*amplitude_scale;
+                    component.decay_time = 1/component.rate;
+                    component.log_time = std::log(component.decay_time);
+                    component.significance = 1;
+                    return {component};
+                }
             }
         }
-        auto amps = solve_normal_eq(G, h);
-        double rss = 0.0;
-        for (int i = 0; i < n; ++i) {
-            double pred = 0.0;
-            for (int k = 0; k < K; ++k) pred += amps[k] * std::exp(-rates[k] * t[i]);
-            rss += (f[i] - pred) * (f[i] - pred);
-        }
-        return {amps, rss};
-    };
-
-    // -----------------------------------------------------------------------
-    // Rate search range: derived from the observed time span.
-    //
-    // The slowest meaningful rate corresponds to a decay time ≈ t_max (one
-    // e-fold over the whole window), and the fastest to a decay time ≈ t_min.
-    // A factor-of-4 margin is added on each side for safety.
-    // -----------------------------------------------------------------------
-    double t_min_obs = *std::min_element(t.begin(), t.end());
-    double t_max_obs = *std::max_element(t.begin(), t.end());
-    double r_global_lo = std::max(0.25 / t_max_obs, 1e-6);
-    double r_global_hi = 4.0  / t_min_obs;
-
-    const int    n_grid     = 100;  // log-space grid density per iteration
-    const double close_tol  = 0.05; // exclude candidates within 5 % of any existing rate
-
-    std::vector<double> found_rates;
-    // RSS with 0 components = ||f||²
-    double rss_current = original_energy;
-
-    // -----------------------------------------------------------------------
-    // Sequential grid search: at each iteration find the next rate by
-    // minimising the exact (K+1)-component LS RSS over the full signal.
-    //
-    // Crucially, rate_1 is also found by grid search (NOT from CWT), because
-    // the CWT ridge for a multi-exponential signal is biased by interference
-    // from weaker components and does not reliably locate the dominant rate.
-    // -----------------------------------------------------------------------
-    // Helper: build ExponentialComponent vector from rates + LS amplitudes.
-    auto build_comps = [&](const std::vector<double>& rates) {
-        auto [amps, dummy] = solve_ls(rates);
-        std::vector<ExponentialComponent> comps;
-        for (int k = 0; k < static_cast<int>(rates.size()); ++k) {
-            ExponentialComponent c;
-            c.rate        = rates[k];
-            c.decay_time  = (rates[k] > 0) ? 1.0 / rates[k] : 0.0;
-            c.log_time    = std::log(c.decay_time > 0 ? c.decay_time : 1.0);
-            c.amplitude   = amps[k];
-            c.significance = std::abs(amps[k]);
-            comps.push_back(c);
-        }
-        return comps;
-    };
-
-    // Helper: compute RSS of a set of components against the original signal.
-    auto rss_of = [&](const std::vector<ExponentialComponent>& comps) {
-        double rss = 0.0;
-        for (int i = 0; i < n; ++i) {
-            double pred = 0.0;
-            for (const auto& c : comps)
-                pred += c.amplitude * std::exp(-c.rate * t[i]);
-            rss += (f[i] - pred) * (f[i] - pred);
-        }
-        return rss;
-    };
-
-    std::vector<ExponentialComponent> all_comps;
-
-    for (int iter = 0; iter < max_components; ++iter) {
-        if (rss_current < energy_tol * original_energy) break;
-
-        // ---- Grid search for the next rate --------------------------------
-        double best_rss_grid = rss_current;
-        double best_r        = -1.0;
-
-        for (int g = 0; g < n_grid; ++g) {
-            double r = r_global_lo *
-                std::pow(r_global_hi / r_global_lo, g / (n_grid - 1.0));
-
-            // Skip candidates within close_tol of any already-found rate
-            // to avoid near-singular Gram matrices.
-            bool too_close = false;
-            for (double er : found_rates)
-                if (std::abs(r - er) / er < close_tol) { too_close = true; break; }
-            if (too_close) continue;
-
-            std::vector<double> cand = found_rates;
-            cand.push_back(r);
-            double rss = solve_ls(cand).second;
-            if (rss < best_rss_grid) { best_rss_grid = rss; best_r = r; }
-        }
-
-        if (best_r < 0.0) break;                                        // no grid improvement
-        if ((rss_current - best_rss_grid) < 0.02 * rss_current) break;  // < 2 % gain
-
-        found_rates.push_back(best_r);
-
-        // ---- Intermediate ALS: polish rates so the RSS check is exact ----
-        // Without this, grid-quantisation error (e.g. 5.06 instead of 5.00)
-        // leaves a small residual that would incorrectly trigger another
-        // grid-search iteration and produce spurious near-duplicate components.
-        auto cur_comps = build_comps(found_rates);
-        refine_components_als(cur_comps, t, f);
-
-        // Update found_rates from ALS-refined values
-        found_rates.clear();
-        for (const auto& c : cur_comps) found_rates.push_back(c.rate);
-
-        rss_current = rss_of(cur_comps);
-        all_comps   = std::move(cur_comps);
     }
-
-    if (all_comps.empty()) return {};
-
-    // -----------------------------------------------------------------------
-    // Normalise significance, sort by significance, optional AIC pruning.
-    // -----------------------------------------------------------------------
-    double sum_abs = 0.0;
-    for (const auto& c : all_comps) sum_abs += std::abs(c.amplitude);
-    if (sum_abs < 1e-15) return {};
-    for (auto& c : all_comps) c.significance = std::abs(c.amplitude) / sum_abs;
-
-    std::sort(all_comps.begin(), all_comps.end(),
-        [](const ExponentialComponent& a, const ExponentialComponent& b) {
-            return a.significance > b.significance;
+    // Kernels and interpolation weights are built once, reused for every residual.
+    std::unique_ptr<LogWavelets> detector;
+    if (wavelets) detector = std::make_unique<LogWavelets>(t, cfg);
+    Fit current; current.rss = energy; current.residual = y;
+    if (wavelets) {
+        // Initialize ALL persistent branches together. Sequentially fitting
+        // one or two exponentials to a three-mode signal wastes nonlinear solves.
+        auto ridges = detector->candidates(y, sigma);
+        std::sort(ridges.begin(), ridges.end(), [](const auto& a, const auto& b) {
+            return a.votes == b.votes ? a.strength > b.strength : a.votes > b.votes;
         });
-
-    if (cfg.use_aic && all_comps.size() > 1) {
-        auto rss_fn = [&](std::size_t k) {
-            auto sub = std::vector<ExponentialComponent>(
-                all_comps.begin(), all_comps.begin() + k);
-            auto r   = reconstruct(sub, t);
-            double s = 0;
-            for (std::size_t idx = 0; idx < t.size(); ++idx) {
-                double d = r[idx] - f[idx]; s += d * d;
-            }
-            return s;
-        };
-        int    best_k   = 1;
-        double best_aic = std::log(rss_fn(1) / t.size()) + 6.0;
-        for (std::size_t k = 2; k <= all_comps.size(); ++k) {
-            double a = std::log(rss_fn(k) / t.size()) + 2.0 * 3.0 * k;
-            if (a < best_aic) { best_aic = a; best_k = static_cast<int>(k); }
+        Vector initial;
+        for (const auto& ridge : ridges) {
+            if (ridge.votes < std::max(cfg.min_ridge_len, cfg.n_scales/2)) continue;
+            bool distinct = true;
+            for (double rate : initial)
+                if (std::abs(std::log(rate/ridge.rate)) < .3) distinct = false;
+            if (distinct) initial.push_back(ridge.rate);
+            if (static_cast<int>(initial.size()) == budget) break;
         }
-        all_comps.resize(best_k);
+        if (!initial.empty())
+            current = prune(refine(t, y, std::move(initial), !cfg.disable_als),
+                            t, y, sigma, cfg, floor);
     }
+    for (int mode = static_cast<int>(current.rates.size()); mode < budget; ++mode) {
+        if (current.rss <= floor) break;
+        double proposal_sigma = sigma;
+        if (cfg.noise_sigma < 0 && !current.rates.empty() && current.rss <= 2*n*sigma*sigma) {
+            // Once residuals are near the noise level, re-estimate their scale
+            // without local-interpolation curvature bias. Never inflate the
+            // original estimate, and leave well-above-noise searches unchanged.
+            Vector deviations = current.residual;
+            double center = median(deviations);
+            for (auto& value : deviations) value = std::abs(value-center);
+            proposal_sigma = std::min(sigma, median(std::move(deviations))/.6744897501960817);
+        }
+        auto proposals = wavelets ? detector->candidates(current.residual, proposal_sigma)
+                                 : std::vector<Candidate>{};
+        if (!wavelets) {
+            for (int j = 0; j < 64; ++j)
+                proposals.push_back({std::exp(std::log(.005/t.back())
+                    +j*std::log(1600*t.back()/t.front())/63), 0, 1});
+        }
+        Matrix tangent = current.e;
+        for (std::size_t j = 0; j < current.rates.size(); ++j) {
+            Vector derivative(n);
+            for (int i = 0; i < n; ++i)
+                derivative[i] = t[i]*current.rates[j]*current.e[j][i];
+            tangent.push_back(std::move(derivative));
+        }
+        // Condition the new mode on BOTH existing amplitudes and rates.
+        // This estimates joint-fit improvement instead of a fixed-rate addition.
+        const auto q = orthonormal(tangent);
+        auto conditional_strength = [&](double rate) {
+            Vector v(n);
+            for (int i = 0; i < n; ++i) v[i] = std::exp(-rate*t[i]);
+            for (int pass = 0; pass < 2; ++pass)
+                for (const auto& column : q) {
+                    double projection = dot(v, column);
+                    for (int i = 0; i < n; ++i) v[i] -= projection*column[i];
+                }
+            double norm = dot(v, v), product = dot(v, current.residual);
+            return norm > 1e-20 ? product*product/norm : 0;
+        };
+        for (auto& proposal : proposals) proposal.strength = conditional_strength(proposal.rate);
+        // A merged ridge can leave a broad residual lobe on the wrong side of
+        // the fitted rate. Search both log-rate sides of that ridge's span,
+        // using the existing Jacobian projection rather than nonlinear fits.
+        // Keep the original proposals as alternatives; no count is prescribed.
+        if (wavelets && current.rates.size() == 1 && !cfg.disable_als && !proposals.empty()) {
+            const auto strongest = std::max_element(proposals.begin(), proposals.end(),
+                [](const Candidate& a, const Candidate& b) { return a.strength < b.strength; });
+            double center = std::log(current.rates[0]);
+            double span = std::min(2.0, std::abs(std::log(strongest->rate)-center)+.3);
+            for (int side : {-1, 1}) {
+                double low = std::max(std::log(.005/t.back()), center+(side < 0 ? -span : .03));
+                double high = std::min(std::log(8/t.front()), center+(side < 0 ? -.03 : span));
+                if (low >= high) continue;
+                constexpr double fraction = .6180339887498948482;
+                double a = high-fraction*(high-low), b = low+fraction*(high-low);
+                double fa = conditional_strength(std::exp(a)), fb = conditional_strength(std::exp(b));
+                for (int iteration = 0; iteration < 18; ++iteration) {
+                    if (fa < fb) {
+                        low = a; a = b; fa = fb;
+                        b = low+fraction*(high-low); fb = conditional_strength(std::exp(b));
+                    } else {
+                        high = b; b = a; fb = fa;
+                        a = high-fraction*(high-low); fa = conditional_strength(std::exp(a));
+                    }
+                }
+                proposals.push_back({std::exp(fa > fb ? a : b), std::max(fa, fb), 1});
+            }
+        }
+        std::sort(proposals.begin(), proposals.end(), [](const Candidate& a, const Candidate& b) {
+            return a.strength > b.strength;
+        });
+        Fit best = current;
+        Vector tried;
+        for (const auto& proposal : proposals) {
+            bool duplicate = false;
+            for (double rate : current.rates)
+                if (std::abs(std::log(proposal.rate/rate)) < .015) duplicate = true;
+            for (double rate : tried)
+                if (std::abs(std::log(proposal.rate/rate)) < .15) duplicate = true;
+            if (duplicate) continue;
+            if (proposal.strength < std::max(cfg.snr_threshold*cfg.snr_threshold,
+                                            2*std::log(double(n)))*proposal_sigma*proposal_sigma) break;
+            Vector rates = current.rates; rates.push_back(proposal.rate);
+            auto candidate = refine(t, y, std::move(rates), !cfg.disable_als);
+            bool identifiable = true;
+            for (std::size_t j = 0; j < candidate.rates.size(); ++j) {
+                if (std::abs(candidate.amplitudes[j]) > 1e4) identifiable = false;
+                for (std::size_t k = j+1; k < candidate.rates.size(); ++k)
+                    if (std::abs(std::log(candidate.rates[j]/candidate.rates[k])) < 1e-5)
+                        identifiable = false;
+            }
+            if (identifiable && candidate.rss < best.rss) best = std::move(candidate);
+            tried.push_back(proposal.rate);
+            if (best.rss <= std::max(floor, 1.3*n*sigma*sigma) || tried.size() >= 3) break;
+        }
+        if (best.rates.size() == current.rates.size()) break;
+        if (mode > 0 && cfg.use_aic && score(best, n, floor, cfg) >= score(current, n, floor, cfg)) break;
+        current = std::move(best);
+        if (!cfg.use_aic && current.rss < energy_tol*energy) break;
+    }
+    // Backward refits remove redundant modes jointly; never truncate a fitted sum.
+    current = prune(std::move(current), t, y, sigma, cfg, floor);
+    std::vector<ExponentialComponent> out;
+    double total = 0;
+    for (double amplitude : current.amplitudes) total += std::abs(amplitude);
+    for (std::size_t j = 0; j < current.rates.size(); ++j) {
+        ExponentialComponent component;
+        component.rate = current.rates[j]; component.decay_time = 1/component.rate;
+        component.log_time = std::log(component.decay_time);
+        component.amplitude = current.amplitudes[j]*amplitude_scale;
+        component.significance = total > 0 ? std::abs(current.amplitudes[j])/total : 0;
+        out.push_back(component);
+    }
+    std::sort(out.begin(), out.end(), [](const auto& a, const auto& b) {
+        return a.significance > b.significance;
+    });
+    return out;
+}
+} // namespace
 
-    return all_comps;
+std::vector<ExponentialComponent> decompose(const Vector& t, const Vector& f,
+        const DecomposeConfig& cfg, int max_components) {
+    return fit_signal(t, f, cfg, max_components, 1e-6, true);
 }
 
-// ---------------------------------------------------------------------------
-// reconstruct
-// ---------------------------------------------------------------------------
+std::vector<ExponentialComponent> decompose_deflate(const Vector& t, const Vector& f,
+        const DecomposeConfig& cfg, int max_components, double energy_tol) {
+    return fit_signal(t, f, cfg, max_components, energy_tol, false);
+}
+
 std::vector<double> reconstruct(
     const std::vector<ExponentialComponent>& components,
     const std::vector<double>& t_eval)
@@ -666,9 +670,19 @@ std::vector<std::complex<double>> reconstruct_laplace(
     for (std::size_t i = 0; i < s_eval.size(); ++i) {
         std::complex<double> s = s_eval[i];
         for (const auto& c : components) {
-            std::complex<double> denom = s + std::complex<double>(c.rate, -c.frequency);
-            if (std::abs(denom) > 1e-30)
-                out[i] += c.amplitude / denom;
+            auto shifted = s + c.rate;
+            if (c.frequency == 0.0) {
+                if (std::abs(shifted) == 0)
+                    throw std::domain_error("Laplace image evaluated at a component pole");
+                out[i] += c.amplitude / shifted;
+            } else {
+                // L{A exp(-rate*t) cos(omega*t+phase)} includes BOTH poles.
+                auto denom = shifted * shifted + c.frequency * c.frequency;
+                if (std::abs(denom) == 0)
+                    throw std::domain_error("Laplace image evaluated at a component pole");
+                out[i] += c.amplitude * (shifted * std::cos(c.phase)
+                            - c.frequency * std::sin(c.phase)) / denom;
+            }
         }
     }
     return out;

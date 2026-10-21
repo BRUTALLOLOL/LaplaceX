@@ -19,7 +19,6 @@ from laplacex._laplacex import (
     inverse_weeks    as _inverse_weeks,
     decompose        as _decompose_cpp,
     decompose_deflate as _decompose_deflate_cpp,
-    reconstruct      as _reconstruct_cpp,
 )
 from laplacex.components import ExponentialComponents
 
@@ -62,7 +61,8 @@ def laplace(
     """
     _cfg = cfg or TransformConfig()
     scalar_s = np.isscalar(s) or (hasattr(s, 'shape') and s.shape == ())
-    s_arr = np.atleast_1d(np.asarray(s, dtype=complex))
+    s_input = np.asarray(s, dtype=complex)
+    s_arr = s_input.reshape(-1)
 
     if callable(f):
         result = _forward_batch(f, s_arr, _cfg)
@@ -75,11 +75,11 @@ def laplace(
             s_arr, _cfg,
         )
 
-    return complex(result[0]) if scalar_s else np.array(result)
+    return complex(result[0]) if scalar_s else np.asarray(result).reshape(s_input.shape)
 
 
 def inverse(
-    F: Callable[[complex], complex],
+    F: Optional[Callable[[complex], complex]],
     t_eval: np.ndarray,
     *,
     sigma: float = 0.0,
@@ -124,12 +124,18 @@ def inverse(
     True
     """
     t_arr = np.asarray(t_eval, dtype=float)
+    if not np.all(np.isfinite(t_arr)) or np.any(t_arr < 0):
+        raise ValueError("Inverse evaluation times must be finite and nonnegative")
     _cfg  = cfg or TransformConfig()
 
     if components is not None:
         return components.reconstruct(t_arr)
 
-    return np.asarray(_inverse_weeks(F, t_arr, sigma, b, N, _cfg))
+    if not callable(F):
+        raise TypeError("F must be callable when components are not supplied")
+    return np.asarray(_inverse_weeks(F, t_arr.reshape(-1), sigma, b, N, _cfg)).reshape(
+        t_arr.shape
+    )
 
 
 def decompose(
@@ -145,9 +151,11 @@ def decompose(
     Decompose a time-series into a sum of exponential components by
     performing wavelet analysis in the logarithmic time plane.
 
-    When ``auto_deflate=True`` (default) and the single-pass CWT finds
-    only one component, the function automatically switches to iterative
-    deflation to recover weaker modes buried under the dominant one.
+    Persistent Mexican-Hat zero-crossing ridges initialize a joint rate and
+    amplitude fit. With ``auto_deflate=True`` (default), excess residual
+    energy beyond both the requested tolerance and estimated noise triggers
+    a second search using rate-grid proposals.
+    Accept the candidate only when it improves the reconstruction.
 
     Parameters
     ----------
@@ -158,11 +166,11 @@ def decompose(
     cfg : DecomposeConfig, optional
         Algorithm configuration.
     auto_deflate : bool
-        If True, fall back to deflation when single-pass finds ≤ 1 component.
+        Try a rate-grid search when residual energy exceeds the tolerance and noise bound.
     max_components : int
-        Max components to extract in deflation mode.
+        Maximum components in both the wavelet and rate-grid stages (1 to 32).
     energy_tol : float
-        Stop deflation when residual energy < energy_tol * original energy.
+        Relative residual-energy threshold for trying the rate-grid fallback.
 
     Returns
     -------
@@ -183,19 +191,35 @@ def decompose(
     t_arr = np.asarray(t, dtype=float)
     f_arr = np.asarray(f, dtype=float)
 
-    comps = _decompose_cpp(t_arr, f_arr, _cfg)
-
-    # Auto-deflate if single-pass missed weak components
-    if auto_deflate and len(comps) <= 1:
+    if max_components <= 0 or not np.isfinite(energy_tol) or not 0 < energy_tol < 1:
+        raise ValueError("Need max_components > 0 and 0 < energy_tol < 1")
+    comps = _decompose_cpp(t_arr, f_arr, _cfg, max_components)
+    if auto_deflate:
         f_hat = ExponentialComponents(comps).reconstruct(t_arr)
-        residual_energy = np.sum((f_arr - f_hat) ** 2)
-        original_energy = np.sum(f_arr ** 2)
+        scale = np.max(np.abs(f_arr))
+        if scale == 0:
+            return ExponentialComponents(comps)
+        residual_energy = np.sum((f_arr/scale - f_hat/scale) ** 2)
+        original_energy = np.sum((f_arr/scale) ** 2)
 
-        if residual_energy > energy_tol * original_energy:
-            comps = _decompose_deflate_cpp(
+        if _cfg.noise_sigma >= 0:
+            noise_sigma = _cfg.noise_sigma/scale
+        else:
+            weight = (t_arr[1:-1]-t_arr[:-2])/(t_arr[2:]-t_arr[:-2])
+            normalized = f_arr/scale
+            differences = (
+                normalized[1:-1]-(1-weight)*normalized[:-2]-weight*normalized[2:]
+            )/np.sqrt(1+(1-weight)**2+weight**2)
+            noise_sigma = np.median(np.abs(differences-np.median(differences)))/0.6744897501960817
+        noise_energy = (len(t_arr)+3*np.sqrt(2*len(t_arr)))*noise_sigma**2
+        if residual_energy > max(energy_tol * original_energy, noise_energy):
+            candidate = _decompose_deflate_cpp(
                 t_arr, f_arr, _cfg,
                 max_components, energy_tol,
             )
+            candidate_hat = ExponentialComponents(candidate).reconstruct(t_arr)
+            if np.sum((f_arr/scale - candidate_hat/scale) ** 2) < residual_energy:
+                comps = candidate
 
     return ExponentialComponents(comps)
 
@@ -228,9 +252,4 @@ def reconstruct(
     >>> np.allclose(f_rec, f, atol=0.05)
     True
     """
-    return np.asarray(
-        _reconstruct_cpp(
-            components._comps,
-            np.asarray(t_eval, dtype=float),
-        )
-    )
+    return components.reconstruct(t_eval)
