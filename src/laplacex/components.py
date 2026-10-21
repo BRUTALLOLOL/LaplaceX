@@ -23,7 +23,7 @@ class ExponentialComponents:
     Container for a list of :class:`ExponentialComponent` objects returned
     by :func:`laplacex.decompose`.
 
-    The components are ordered by *significance* (descending).
+    The components are ordered by relative absolute-amplitude weight (descending).
 
     Parameters
     ----------
@@ -87,9 +87,18 @@ class ExponentialComponents:
         return np.array([c.phase for c in self._comps])
 
     @property
-    def significances(self) -> np.ndarray:
-        """Relative absolute amplitudes of components (sums to approximately 1)."""
+    def weights(self) -> np.ndarray:
+        """Normalized absolute amplitudes; these are not statistical probabilities.
+
+        Values are the native component weights and sum to approximately one
+        for a nonempty decomposition. An empty result has an empty weight array.
+        """
         return np.array([c.significance for c in self._comps])
+
+    @property
+    def significances(self) -> np.ndarray:
+        """Compatibility alias for :attr:`weights`; not statistical significance."""
+        return self.weights
 
     @property
     def log_times(self) -> np.ndarray:

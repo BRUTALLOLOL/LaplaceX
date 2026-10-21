@@ -1,0 +1,39 @@
+[
+  {
+    "analytic_single_rate": 0.3,
+    "linear_peak_rate": 0.2999868620963516
+  },
+  {
+    "analytic_single_rate": 0.5,
+    "linear_peak_rate": 0.4997390708051714
+  },
+  {
+    "analytic_single_rate": 1.0,
+    "linear_peak_rate": 0.998429102232284
+  },
+  {
+    "release_equivalence_rates": [
+      0.3,
+      3
+    ],
+    "passed": true
+  },
+  {
+    "release_equivalence_rates": [
+      0.5,
+      0.7
+    ],
+    "passed": true
+  },
+  {
+    "release_equivalence_rates": [
+      0.03,
+      2,
+      60
+    ],
+    "passed": true
+  },
+  {
+    "constant_cancellation_both_coordinates": true
+  }
+]

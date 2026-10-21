@@ -1,11 +1,15 @@
-# LaplaceX 1.0.0
+# LaplaceX 1.1.0
 
-**Python library for numerical forward and inverse Laplace transforms.**
+**Python library for exponential-mixture fitting and numerical Laplace transforms.**
 
 LaplaceX combines adaptive Gauss–Kronrod forward quadrature, Weeks–Laguerre
 inversion, and exponential fitting seeded by wavelet analysis in logarithmic
 time. Accuracy depends on the signal, sampling window, and configuration;
-see [measured accuracy and limitations](benchmarks/ACCURACY.md).
+see [evaluation and limitations](benchmarks/research/REPORT.md).
+
+Version 1.1.0 is a recent research release. Tests establish a checked software
+snapshot; the experimental example and single-machine timings do not establish
+broad experimental validation or long-term adoption.
 
 | Operation | Implementation |
 |---|---|
@@ -24,131 +28,71 @@ Optional extras: `matplotlib` (plotting), `pandas` (DataFrame export).
 ---
 
 <!-- comparison:start -->
-## Log-wavelet recovery: measured results
+## Component recovery: scope and evidence
 
-Persistent log-plane wavelet ridges now initialize a joint rate/amplitude fit.
-Noise propagation, BIC selection and refitted deletions control missed and
-duplicate modes. The default route does not need the true component count.
+Decomposition fits real decaying exponentials and selects a count up to the
+component budget. It estimates amplitudes and rates; oscillation frequencies
+are not estimated. Log-time wavelet proposals initialize a joint fit to the
+original samples. Forward quadrature and Weeks inversion are separate routines.
 
-The separately seeded validation recovered the correct count in **160/160** mixtures
-with the rate-grid fallback disabled. It includes 80 clean and 80 noisy signals,
-1–4 modes, linear and logarithmic sampling, and independently varied amplitudes/rates.
-Maximum clean rate error: `1.828e-12` relative.
-For noise σ=0.001, median / 95th-percentile / maximum rate errors were
-**0.26% / 4.55% / 7.30%**.
-Correct counts do not imply exact rates in noisy, poorly conditioned mixtures.
-These are finite synthetic validation results, not a guarantee for all signals.
+The expanded evaluation keeps the 1.0.0 numerical core fixed. Its main route
+disables the rate-grid retry in every section; public-default retry is a
+separate sensitivity check. Every comparator's outcomes and failures are retained.
 
-The two noisy failures in seed 20261107 are fixed: **158/160 → 160/160** correct counts.
-There are **2 changed count decisions** on that regression set.
-An additional seed (20261119) recovers **160/160** counts.
-Across the three seeds: **480/480**, with fallback disabled.
-The formerly failing set's noisy rate-error 95th percentile is **4.92% before / 4.85% after**.
-The additional seed's noisy rate-error 95th percentile is **6.58%**.
-Across all noisy mixtures, the largest rate error is **21.07%**;
-this pre-existing limitation shows why correct counts do not guarantee precise individual rates.
-Seed 20261107 is now regression data because its failures informed these fixes;
-seed 20261119 was chosen before implementation and was not used to tune the rules.
-
-The boundary uncertainty check removes an unconstrained extrapolated mode.
-Residual MAD calibration reveals a previously suppressed weak component.
-Explicit noise settings are respected, and identifiable fast modes remain supported.
-
-| Previously failing case | Modes before → after / truth | Clean RMSE before → after | Largest rate error after |
+| Evaluation | Log wavelets | Variable projection + BIC | Matrix pencil + refinement |
 |---|---:|---:|---:|
-| log grid, case 41 | 3 → 2 / 2 | 1.78e-04 → 9.72e-05 | 0.17% |
-| uniform grid, case 47 | 3 → 4 / 4 | 2.71e-04 → 9.28e-05 | 2.93% |
+| Reused validation/regression mixtures: correct counts | 480/480 | 479/480 | 235/240 |
+| New noise/separation sweep: correct counts | 708/960 | 737/960 | 323/480 |
+| New sweep: correct count **and** rate/reconstruction target | 573/960 | 613/960 | 280/480 |
 
-![Component speed and weak-mode accuracy](benchmarks/comparison/wavelet_comparison.png)
+Matrix-pencil denominators include only originally uniform grids. The reused
+sets include cases that informed development; the new sweep protocol was frozen
+before evaluation. It uses two components, six rate ratios (1.1–10), four Gaussian
+noise levels (0.0001–0.05), two sampling grids, and twenty realizations per cell.
+Neither result establishes reliability for arbitrary decay data.
 
-| Signal | LaplaceX default, ms | Fastest passing SciPy auto-K, ms | Speed ratio | Modes: LaplaceX / truth |
-|---|---:|---:|---:|---:|
-| single_uniform | 0.37 | 2.01 | 5.38× | 1 / 1 |
-| two_uniform | 2.51 | 11.51 | 4.60× | 2 / 2 |
-| three_log_pilot | 1.28 | 36.44 | 28.37× | 3 / 3 |
-| two_log_pilot | 0.95 | 6.55 | 6.93× | 2 / 2 |
-| three_log_holdout | 1.25 | 15.98 | 12.77× | 3 / 3 |
-| close_rates_holdout | 7.99 | 50.77 | 6.35× | 2 / 2 |
-| weak_fast | 2.41 | 18.31 | 7.61× | 3 / 3 |
-| weak_middle | 2.11 | 13.33 | 6.32× | 3 / 3 |
-| weak_slow | 2.09 | 40.00 | 19.13× | 3 / 3 |
-| noisy_log_seed7 | 2.79 | 37.69 | 13.52× | 3 / 3 |
-| noisy_log_seed19 | 2.58 | 36.42 | 14.13× | 3 / 3 |
-| noisy_log_seed41 | 2.48 | 34.46 | 13.88× | 3 / 3 |
+### What wavelet initialization improves
 
-Times are medians of five local runs after warmup. SciPy comparison includes
-both TRF and LM automatic-count fits with BIC, plus the original residual-stop
-baseline. The table chooses the fastest configuration that recovers the count
-and meets the reported reconstruction/rate accuracy criteria. Known-count
-SciPy oracle results, every configuration, and individual timings are in the report.
+An external harness compiles log-time, linear-coordinate, and rate-grid routes
+with the **same native optimizer, selection rules, compiler, and wrapper**.
+Both coordinate detectors target peaks of the negative log-time derivative;
+their point/scale budgets and relative filter widths match.
 
-### Where the accuracy advantage comes from
+On the separated three-mode B fixture, the log route takes **1.23 ms**, versus
+**8.88 ms** for linear coordinates and **12.29 ms** for rate-grid proposals
+(**7.22×** and **9.99×** ratios). On the close pair, **linear coordinates are
+faster: 6.80 ms versus 7.96 ms**. Times are medians of seven shuffled runs on
+one Intel i7-7700HQ/Windows machine. All twelve development-exposed fixtures,
+timings, and accuracy checks are reported; the single-mode shortcut is shared.
 
-| Weak mode | LaplaceX modes / max abs error | SciPy residual-stop modes / max abs error | SciPy BIC / known-K accuracy |
-|---|---:|---:|---|
-| weak_fast | 3 / 4.44e-16 | 2 / 4.25e-04 | Also recovers 3 modes; error down to 6.66e-16 |
-| weak_middle | 3 / 4.44e-16 | 2 / 3.79e-04 | Also recovers 3 modes; error down to 4.44e-16 |
-| weak_slow | 3 / 5.20e-16 | 2 / 8.53e-04 | Also recovers 3 modes; error down to 4.44e-16 |
+These controls support a reduction in proposal-search cost for some multiscale
+signals. The earlier SciPy timing ratios include Python callback and solver
+differences and are not used to isolate the wavelet contribution.
 
-At 1000:1 amplitudes, the residual-stop SciPy baseline can stop at two modes.
-Wavelet-guided selection recovers the weak third mode. Stronger SciPy BIC
-selection or supplying the count also recovers it, with additional fitting
-work. Successful fits generally reach the same float64 accuracy; this is
-an automatic model-selection advantage, not universal precision superiority.
+### Count recovery and parameter uncertainty
 
-### Isolating the wavelet contribution
+Correct counts do not ensure correct individual rates. The new sweep's
+95th-percentile rate error among correctly counted log-wavelet fits is **31.85%**,
+with extreme failures retained in the raw records. The joint target above
+requires maximum rate error ≤10% and clean-signal RMSE ≤noise standard deviation.
+The old 21.07% worst noisy case is also reproduced by a true-count variable-
+projection fit; a local information calculation indicates weak identifiability.
+Cramér–Rao diagnostics assume known count and independent Gaussian noise and do
+not certify automatic model selection.
 
-The pair-case follow-up caches noise thresholds at crossings, pads filter
-boundaries, refines unresolved ridge proposals on both sides, and reuses QR
-across damping trials. Count-selection rules and fit tolerances are retained.
+The clean 1000:1 weak-mode examples distinguish a premature residual-stop rule
+from stronger count selection: SciPy BIC and known-count fits also recover the
+weak modes. Successful clean fits generally reach comparable float64 accuracy.
 
-| Previously slower case | Before: wavelet / grid ms | Now: wavelet / grid ms | Wavelet speedup vs previous | Now: grid / wavelet |
-|---|---:|---:|---:|---:|
-| two_uniform | 4.03 / 3.63 | 2.51 / 3.77 | 1.61× | 1.50× |
-| close_rates_holdout | 12.87 / 8.68 | 7.99 / 8.23 | 1.61× | 1.03× |
+Two openly licensed measured fluorescence tails add an application example.
+Their true component counts are unknown, and an additional gate delay changes
+the delayed-fluorescence count. Instrument response, background, and photon-noise
+models matter before assigning physical lifetimes.
 
-A separate **21-run** randomized check of the final binary confirms the local pair timings.
-Cells show median [25th, 75th percentile] milliseconds; every fit must pass the component-count and accuracy checks.
-
-| Case | Default wavelets, ms | Rate grid, ms | Grid / wavelet |
-|---|---:|---:|---:|
-| two_uniform | 3.16 [2.95, 3.40] | 4.36 [4.10, 4.88] | 1.38× |
-| close_rates_holdout | 7.14 [6.84, 7.50] | 8.33 [7.90, 8.75] | 1.17× |
-
-The no-wavelet ablation uses rate-grid candidates with the **same new QR/LM
-optimizer, noise tests and model selection**. It separates wavelet initialization
-from the optimizer rewrite. Full before/after and ablation results are published.
-
-With the same optimizer, default wavelet initialization is **19.25×** faster
-on the widely separated three-mode case and **7.83×** faster on its holdout.
-The two-uniform and close-rate ratios are **1.50×** and
-**1.03×** respectively; above 1 means wavelets are faster.
-These ratios compare the native rate-grid route
-with the public wavelet route, including its Python routing overhead.
-
-The exact single-mode shortcut is shared by both routes; speed gains on
-that case belong to the shortcut rather than to wavelet analysis.
-
-![Inverse speed and wavelet ablation](benchmarks/comparison/comparison.png)
-
-The ordinary forward quadrature and Weeks inverse paths remain separate from
-wavelet decomposition. Their speedups over mpmath are reported independently.
-No finite benchmark establishes superiority on all signals: colored noise,
-unobserved time scales and nearly coincident modes remain difficult.
-
-[Full report, settings, historical measurements, and raw data](benchmarks/COMPARISON.md).
-
-```bash
-python -m pip install ".[benchmark]"
-python benchmarks/validate_wavelets.py
-python benchmarks/validate_wavelets.py --seed 20261107 --output benchmarks/comparison/validation_fresh.json
-python benchmarks/validate_wavelets.py --seed 20261119 --output benchmarks/comparison/validation_holdout.json
-python benchmarks/compare.py --section all --repeats 5 --points 64
-python benchmarks/compare_extended.py --repeats 5 --points 64
-python benchmarks/compare_pairs.py --repeats 21
-python benchmarks/render_comparison.py --update-readme
-```
-
+[Expanded report and reproduction instructions](benchmarks/research/REPORT.md) ·
+[Frozen protocol](benchmarks/research/PROTOCOL.md) ·
+[Release comparisons and historical measurements](benchmarks/COMPARISON.md) ·
+[Historical numerical audit](benchmarks/ACCURACY.md)
 <!-- comparison:end -->
 
 ## Quick Start
@@ -224,7 +168,7 @@ and visualisation.
 ec.amplitudes    # ndarray, shape (n,)
 ec.rates         # ndarray, decay rates λ_k
 ec.decay_times   # ndarray, τ_k = 1/λ_k
-ec.significances # ndarray, normalized absolute amplitudes
+ec.significances # ndarray, normalized absolute amplitudes; not p-values
 
 ec.filter(min_significance=0.1)
 ec.top(3)

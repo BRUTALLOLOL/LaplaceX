@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-21",
+  "target": "SoftwareX Original Software Publication draft",
+  "core_release_commit": "ff164d309a89b72eaafb2c58eb83430399ba9b24",
+  "numerical_cpp_unchanged": true,
+  "abstract_words": 162,
+  "conservative_text_words": 2596,
+  "count_method": "Pandoc AST: abstract + body, including captions, table cells, code and math tokens; excluding metadata and references",
+  "pdf_pages": 10,
+  "figures": 4,
+  "tables": 3,
+  "references": 18,
+  "latex_compile": "success; Tectonic 0.17.0",
+  "overfull_boxes": false,
+  "undefined_references": false,
+  "tests_passed": 157,
+  "legacy_cases": 480,
+  "new_sweep_signals": 960,
+  "timed_fixtures": 12,
+  "timing_repetitions": 7,
+  "experimental_curves": 2,
+  "frozen_source_hashes_verified": true,
+  "native_control_checks": "analytic peaks, constant cancellation, and installed-release equivalence passed",
+  "remaining_author_input": [
+    "final scientific review",
+    "funding",
+    "competing interests",
+    "CRediT confirmation",
+    "submission-policy review"
+  ],
+  "visual_layout_review": "All ten pages inspected in overview; final abstract, sweep, information-bound and experimental pages inspected at readable scale. No clipping or overlapping labels.",
+  "companion_version": "1.1.0"
+}

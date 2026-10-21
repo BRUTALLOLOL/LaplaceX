@@ -1,0 +1,7 @@
+{
+  "processor_name": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+  "registry_nominal_mhz": 2808,
+  "power_plan": "Balanced (381b4222-f694-41f0-9685-ff5bb260df2e)",
+  "method": "Read-only Windows CPU registry and powercfg /getactivescheme",
+  "note": "Nominal frequency and active plan only; no fixed-clock or thermal-control claim."
+}

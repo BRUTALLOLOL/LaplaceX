@@ -1,0 +1,3 @@
+# Preserve frozen evaluation hashes on Windows and Unix checkouts.
+benchmarks/research/** text eol=lf
+benchmarks/research/data/*.csv -text

@@ -515,6 +515,15 @@ def write_report(forward, inverse, decomposition, validation):
 
 
 def update_readme(inverse, decomposition, validation):
+    research_section = ROOT / "research" / "README_SECTION.md"
+    if research_section.exists():
+        path = ROOT.parent / "README.md"
+        text = path.read_text(encoding="utf-8")
+        start, end = "<!-- comparison:start -->", "<!-- comparison:end -->"
+        begin, finish = text.index(start), text.index(end) + len(end)
+        replacement = start + "\n" + research_section.read_text(encoding="utf-8").strip() + "\n" + end
+        path.write_text(text[:begin] + replacement + text[finish:], encoding="utf-8")
+        return
     lines = ["<!-- comparison:start -->", "## Log-wavelet recovery: measured results", "",
              "Persistent log-plane wavelet ridges now initialize a joint rate/amplitude fit.",
              "Noise propagation, BIC selection and refitted deletions control missed and",

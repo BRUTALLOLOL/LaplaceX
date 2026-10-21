@@ -1,0 +1,4 @@
+Compiled controls separate wavelet proposal costs from solver implementation.
+A frozen 960-signal sweep exposes count and rate-identification limits.
+Variable projection and matrix-pencil baselines score reused synthetic data.
+Measured fluorescence tails reveal sensitivity to the analysis window.

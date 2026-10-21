@@ -1,4 +1,4 @@
-# Numerical verification — 20 October 2026
+# Historical numerical audit — 20 October 2026
 
 This report preserves the initial numerical fixes, before the subsequent
 log-plane wavelet rewrite. For the current component-recovery results,

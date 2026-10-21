@@ -1,0 +1,15 @@
+\begin{table}[htbp]
+\centering\small
+\caption{Count recovery on the reused 480-mixture set and the new 960-observation sweep. Legacy rate errors are the conditional 95th percentile of the largest per-mixture relative error, in percent, for noisy correctly counted cases. The final column also requires the stated reconstruction and rate-error targets. Pencil denominators include only uniform grids.}\label{tab:research-counts}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & Legacy counts & Legacy 95th (\%) & Sweep counts & Sweep pass \\
+\midrule
+Log wavelets & 480/480 & 5.40 & 708/960 & 573/960 \\
+Linear wavelets & 477/480 & 5.42 & 708/960 & 580/960 \\
+Native grid & 480/480 & 5.40 & 737/960 & 568/960 \\
+Variable projection & 479/480 & 5.40 & 737/960 & 613/960 \\
+Pencil + refinement & 235/240 & 7.29 & 323/480 & 280/480 \\
+\bottomrule
+\end{tabular}
+\end{table}

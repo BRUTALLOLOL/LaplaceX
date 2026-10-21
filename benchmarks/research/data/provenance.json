@@ -1,0 +1,32 @@
+{
+  "doi": "10.5281/zenodo.20792957",
+  "url": "https://zenodo.org/records/20792957/files/Emission%20Decay.zip?download=1",
+  "license": "CC-BY-4.0",
+  "authors": [
+    "Stephan Kupfer",
+    "Alexander Tombrink",
+    "Benedikt Callies",
+    "Daniel Kowalczyk",
+    "Benedikt Wiedemann"
+  ],
+  "title": "Supplementary Data: 4CzIPN Photosensitizes the Cobaloxime-catalyzed Light-Driven Hydrogen Evolution Reaction",
+  "version": "v3",
+  "published": "2026-06-22",
+  "archive_md5": "65718629f717491b3c043f1f87e22b16",
+  "archive_sha256": "ed666ec2c49fe7fe57bbcd6c923f70474e4310785abd7c18d1dd5293b2e213f2",
+  "files": [
+    {
+      "label": "delayed",
+      "archive_member": "Emission Decay/Delayed Fluorescence/4CzIPN-AA-SV-S1-DF.csv",
+      "units": "microseconds",
+      "sha256": "e0ac119304f0c77c31655e392716eb68b419119060bdbb277d093bad4c483504"
+    },
+    {
+      "label": "prompt",
+      "archive_member": "Emission Decay/Promt Fluorescence/4CzIPN-AA-SV-S1-PF.csv",
+      "units": "nanoseconds",
+      "sha256": "04286da7ba8abaf9f77fb812ac9227dbb33239098f7bd5eb9d3ebf5420023fbb"
+    }
+  ],
+  "protocol_sha256": "892c5d790517d5e65d4f8a64da5a99500044bec7469e5f248a7d2c4e24856722"
+}

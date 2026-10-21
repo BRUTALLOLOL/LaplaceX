@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.0] — 2026-10-21
+
+- Add `ExponentialComponents.weights` for normalized absolute amplitudes;
+  retain `significances` as a compatibility alias. These are not statistical
+  significance measures. The numerical core is unchanged.
+- Add external compiled log/linear-coordinate controls, variable-projection
+  and matrix-pencil comparisons, a frozen noise/separation sweep with local
+  Gaussian Cramer--Rao diagnostics, and attributed experimental fluorescence data.
+- Add independent checks for the evaluation Jacobian, Fisher information,
+  specialist baselines, and amplitude-weight compatibility.
+
 ## [1.0.0] — 2026-10-21
 
 ### Noisy component detection
