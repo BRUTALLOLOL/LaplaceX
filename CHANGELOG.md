@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0] — 2026-10-21
+
+- Refine rates by separable least squares with QR-fitted amplitudes and an exact
+  projected Jacobian. Retain the original joint optimizer as a retry when a
+  projected result violates the existing coalescence/amplitude limits.
+- Search unresolved pairs even without an above-noise residual ridge. Use a
+  permissive residual/noise screening bound before the existing BIC/AICc test.
+- Add detection regression fixtures, an independently seeded noise/separation
+  sweep, signed/null checks, and matched before/after timing controls.
+- Update `benchmarks/COMPARISON.md` with accuracy, speed, and remaining failures.
+
 ## [1.1.0] — 2026-10-21
 
 - Add `ExponentialComponents.weights` for normalized absolute amplitudes;

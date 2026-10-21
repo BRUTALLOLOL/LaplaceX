@@ -96,6 +96,15 @@ struct Fit {
     double rss = std::numeric_limits<double>::infinity();
 };
 
+bool admissible(const Fit& fit) {
+    for (std::size_t j = 0; j < fit.rates.size(); ++j) {
+        if (std::abs(fit.amplitudes[j]) > 1e4) return false;
+        for (std::size_t k = j+1; k < fit.rates.size(); ++k)
+            if (std::abs(std::log(fit.rates[j]/fit.rates[k])) < 1e-5) return false;
+    }
+    return true;
+}
+
 void evaluate(Fit& fit, const Vector& t, const Vector& y) {
     fit.e = basis(t, fit.rates);
     fit.residual = y;
@@ -110,7 +119,7 @@ void evaluate(Fit& fit, const Vector& t, const Vector& y) {
     fit.rss = static_cast<double>(rss);
 }
 
-Fit refine(const Vector& t, const Vector& y, Vector rates, bool optimize) {
+Fit refine_joint(const Vector& t, const Vector& y, Vector rates, bool optimize) {
     Fit fit;
     fit.rates = std::move(rates);
     fit.e = basis(t, fit.rates);
@@ -180,6 +189,138 @@ Fit refine(const Vector& t, const Vector& y, Vector rates, bool optimize) {
     polished.amplitudes = std::move(amplitudes);
     evaluate(polished, t, y);
     if (polished.rss < fit.rss) fit = std::move(polished);
+    return fit;
+}
+
+
+// Separable least squares: solve linear amplitudes at every rate iterate.
+// Twice-reorthogonalized, column-scaled QR avoids normal equations and keeps
+// the small projected rate problem independent of amplitude/rate coupling.
+struct Projection {
+    Matrix q, r;
+    Vector norms;
+};
+
+bool project_fit(Fit& fit, const Vector& t, const Vector& y, Projection& qr) {
+    const int k = static_cast<int>(fit.rates.size());
+    fit.e = basis(t, fit.rates);
+    qr.q.clear(); qr.r.assign(k, Vector(k, 0)); qr.norms.resize(k);
+    Vector coefficients(k);
+    for (int j = 0; j < k; ++j) {
+        qr.norms[j] = std::sqrt(dot(fit.e[j], fit.e[j]));
+        if (qr.norms[j] < 1e-100) return false;
+        Vector v = fit.e[j];
+        for (auto& value : v) value /= qr.norms[j];
+        for (int pass = 0; pass < 2; ++pass)
+            for (int i = 0; i < j; ++i) {
+                double product = dot(qr.q[i], v);
+                qr.r[j][i] += product;
+                for (std::size_t n = 0; n < t.size(); ++n) v[n] -= product*qr.q[i][n];
+            }
+        qr.r[j][j] = std::sqrt(dot(v, v));
+        if (qr.r[j][j] < 1e-12) return false;
+        for (auto& value : v) value /= qr.r[j][j];
+        qr.q.push_back(std::move(v));
+        coefficients[j] = dot(qr.q[j], y);
+    }
+    for (int j = k-1; j >= 0; --j) {
+        for (int q = j+1; q < k; ++q) coefficients[j] -= qr.r[q][j]*coefficients[q];
+        coefficients[j] /= qr.r[j][j];
+    }
+    fit.amplitudes.resize(k); fit.residual = y;
+    for (int j = 0; j < k; ++j) fit.amplitudes[j] = coefficients[j]/qr.norms[j];
+    long double rss = 0;
+    for (std::size_t i = 0; i < t.size(); ++i) {
+        long double prediction = 0;
+        for (int j = 0; j < k; ++j)
+            prediction += static_cast<long double>(fit.amplitudes[j])*fit.e[j][i];
+        fit.residual[i] -= static_cast<double>(prediction);
+        rss += static_cast<long double>(fit.residual[i])*fit.residual[i];
+    }
+    fit.rss = static_cast<double>(rss);
+    return std::isfinite(fit.rss);
+}
+
+Matrix projected_jacobian(const Fit& fit, const Vector& t, const Projection& qr) {
+    const int k = static_cast<int>(fit.rates.size());
+    Matrix jacobian(k, Vector(t.size()));
+    for (int j = 0; j < k; ++j) {
+        Vector derivative(t.size());
+        for (std::size_t i = 0; i < t.size(); ++i) {
+            derivative[i] = -fit.rates[j]*t[i]*fit.e[j][i];
+            jacobian[j][i] = fit.amplitudes[j]*derivative[i];
+        }
+        for (const auto& q : qr.q) {
+            double product = dot(q, jacobian[j]);
+            for (std::size_t i = 0; i < t.size(); ++i) jacobian[j][i] -= product*q[i];
+        }
+        // Exact residual-dependent term. Omitting it is only the Kaufman
+        // approximation, and can matter for close rates in noisy data.
+        Vector correction(k, 0);
+        correction[j] = dot(derivative, fit.residual)/qr.norms[j];
+        for (int i = 0; i < k; ++i) {
+            for (int q = 0; q < i; ++q) correction[i] -= qr.r[i][q]*correction[q];
+            correction[i] /= qr.r[i][i];
+        }
+        for (int q = 0; q < k; ++q)
+            for (std::size_t i = 0; i < t.size(); ++i)
+                jacobian[j][i] += correction[q]*qr.q[q][i];
+    }
+    return jacobian;
+}
+
+Fit refine(const Vector& t, const Vector& y, Vector rates, bool optimize) {
+    if (!optimize || rates.size() < 2) return refine_joint(t, y, std::move(rates), optimize);
+    const Vector initial_rates = rates;
+    Fit fit; fit.rates = std::move(rates);
+    Projection qr;
+    if (!project_fit(fit, t, y, qr)) return refine_joint(t, y, fit.rates, true);
+    const int k = static_cast<int>(fit.rates.size());
+    const double low = .005/t.back(), high = 8/t.front(), floor = 1e-30*dot(y,y);
+    double damping = 1e-3;
+    for (int iteration = 0; iteration < 150 && fit.rss > floor; ++iteration) {
+        auto jacobian = projected_jacobian(fit, t, qr);
+        Vector norms(k), rhs = fit.residual;
+        for (int j = 0; j < k; ++j) {
+            norms[j] = std::max(1e-100, std::sqrt(dot(jacobian[j], jacobian[j])));
+            for (auto& value : jacobian[j]) value /= norms[j];
+        }
+        triangularize(jacobian, rhs);
+        rhs.resize(k);
+        for (auto& column : jacobian) column.resize(k);
+        bool accepted = false;
+        double previous = fit.rss;
+        for (int trial = 0; trial < 12; ++trial) {
+            auto augmented = jacobian;
+            auto target = rhs; target.resize(2*k, 0);
+            for (int j = 0; j < k; ++j) {
+                augmented[j].resize(2*k, 0);
+                augmented[j][k+j] = std::sqrt(damping);
+            }
+            auto step = least_squares(std::move(augmented), std::move(target));
+            double largest = 0;
+            for (int j = 0; j < k; ++j) largest = std::max(largest, std::abs(step[j]/norms[j]));
+            double factor = largest > 1.5 ? 1.5/largest : 1;
+            Fit candidate; candidate.rates.resize(k);
+            for (int j = 0; j < k; ++j)
+                candidate.rates[j] = std::clamp(fit.rates[j]*std::exp(factor*step[j]/norms[j]),low,high);
+            Projection next;
+            if (project_fit(candidate,t,y,next) && candidate.rss < fit.rss) {
+                fit = std::move(candidate); qr = std::move(next);
+                damping = std::max(1e-16,damping*.15); accepted = true; break;
+            }
+            damping = std::min(1e12,damping*8);
+        }
+        if (!accepted || previous-fit.rss <= 2e-15*fit.rss) break;
+    }
+    // The decomposition excludes coalescing rates with unbounded cancelling
+    // amplitudes. Such a projected minimum can block the next component even
+    // in clean signed mixtures. Retry the original joint coordinates only for
+    // these inadmissible results, preserving the same admissibility limits.
+    if (!admissible(fit)) {
+        auto joint = refine_joint(t, y, initial_rates, true);
+        if (admissible(joint)) return joint;
+    }
     return fit;
 }
 
@@ -556,11 +697,12 @@ std::vector<ExponentialComponent> fit_signal(const Vector& t, const Vector& f,
         // the fitted rate. Search both log-rate sides of that ridge's span,
         // using the existing Jacobian projection rather than nonlinear fits.
         // Keep the original proposals as alternatives; no count is prescribed.
-        if (wavelets && current.rates.size() == 1 && !cfg.disable_als && !proposals.empty()) {
+        if (wavelets && current.rates.size() == 1 && !cfg.disable_als) {
             const auto strongest = std::max_element(proposals.begin(), proposals.end(),
                 [](const Candidate& a, const Candidate& b) { return a.strength < b.strength; });
             double center = std::log(current.rates[0]);
-            double span = std::min(2.0, std::abs(std::log(strongest->rate)-center)+.3);
+            double span = proposals.empty() ? 1.0 :
+                std::min(2.0, std::abs(std::log(strongest->rate)-center)+.3);
             for (int side : {-1, 1}) {
                 double low = std::max(std::log(.005/t.back()), center+(side < 0 ? -span : .03));
                 double high = std::min(std::log(8/t.front()), center+(side < 0 ? -.03 : span));
@@ -592,18 +734,26 @@ std::vector<ExponentialComponent> fit_signal(const Vector& t, const Vector& f,
             for (double rate : tried)
                 if (std::abs(std::log(proposal.rate/rate)) < .15) duplicate = true;
             if (duplicate) continue;
-            if (proposal.strength < std::max(cfg.snr_threshold*cfg.snr_threshold,
-                                            2*std::log(double(n)))*proposal_sigma*proposal_sigma) break;
+            // This is a cheap proposal screen, not the model-selection decision.
+            // Use the fitted residual scale, consistent with unknown-variance
+            // BIC/AICc, and leave room for nonlinear rate movement. A derivative
+            // ridge can be absent even when a close second mode passes BIC.
+            double penalty = 2*std::log(double(n));
+            if (cfg.model_selection == "aicc") {
+                double p = 2*current.rates.size();
+                penalty = 4+2*(p+2)*(p+3)/std::max(1.0,n-p-3)
+                           -2*p*(p+1)/std::max(1.0,n-p-1);
+            }
+            // An incomplete signal model can have residual energy far above
+            // the measurement noise. Do not use that modeling error as a
+            // noise estimate: it would hide weak signed or cancelling modes.
+            double screening_energy = std::min(current.rss,n*proposal_sigma*proposal_sigma);
+            double screening = .25*screening_energy*(-std::expm1(
+                -std::max(penalty,cfg.snr_threshold*cfg.snr_threshold)/n));
+            if (proposal.strength < std::max(floor, screening)) break;
             Vector rates = current.rates; rates.push_back(proposal.rate);
             auto candidate = refine(t, y, std::move(rates), !cfg.disable_als);
-            bool identifiable = true;
-            for (std::size_t j = 0; j < candidate.rates.size(); ++j) {
-                if (std::abs(candidate.amplitudes[j]) > 1e4) identifiable = false;
-                for (std::size_t k = j+1; k < candidate.rates.size(); ++k)
-                    if (std::abs(std::log(candidate.rates[j]/candidate.rates[k])) < 1e-5)
-                        identifiable = false;
-            }
-            if (identifiable && candidate.rss < best.rss) best = std::move(candidate);
+            if (admissible(candidate) && candidate.rss < best.rss) best = std::move(candidate);
             tried.push_back(proposal.rate);
             if (best.rss <= std::max(floor, 1.3*n*sigma*sigma) || tried.size() >= 3) break;
         }

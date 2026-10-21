@@ -1,3 +1,7 @@
 # Preserve frozen evaluation hashes on Windows and Unix checkouts.
 benchmarks/research/** text eol=lf
 benchmarks/research/data/*.csv -text
+
+# Preserve the exact source bytes recorded by the detection study.
+cpp/src/critical.cpp text eol=crlf
+benchmarks/detection/** -text whitespace=cr-at-eol

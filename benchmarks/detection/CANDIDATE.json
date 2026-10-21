@@ -1,0 +1,6 @@
+{
+  "before_commit": "3708dd2518bb1f53f4bd4b10fd2e924671cca3a1",
+  "source_sha256": "d0fe70e42153f16871b67cddcff1046985868bb81896a6a0fe636af0c180a70e",
+  "holdout_seed": 2026102217,
+  "policy": "Frozen before final fresh-seed outcomes; first candidate rejected using signed-mixture development checks. No manuscript files included."
+}

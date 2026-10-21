@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 # ---------------------------------------------------------------------------
 [project]
 name            = "LaplaceX"
-version         = "1.1.0"
+version         = "1.2.0"
 description     = "Numerical Laplace transforms and log-plane wavelet exponential decomposition"
 readme          = "README.md"
 license         = { text = "MIT" }
@@ -65,6 +65,7 @@ Repository     = "https://github.com/BRUTALLOLOL/LaplaceX"
 [tool.scikit-build]
 wheel.packages      = ["src/laplacex"]
 build-dir           = "build/{wheel_tag}"
+sdist.exclude       = ["manuscript/**", "**/REVIEW_RESPONSE*", "**/SUBMISSION_NOTES*"]
 
 [tool.scikit-build.cmake]
 build-type = "Release"

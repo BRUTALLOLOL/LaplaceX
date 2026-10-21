@@ -22,7 +22,7 @@ def test_release_version_matches_installed_metadata_and_native_module():
     import laplacex
     from laplacex import _laplacex
 
-    assert laplacex.__version__ == _laplacex.__version__ == version("LaplaceX") == "1.1.0"
+    assert laplacex.__version__ == _laplacex.__version__ == version("LaplaceX") == "1.2.0"
 
 
 @pytest.mark.parametrize("rate", [1e-12, 1., 1e12])

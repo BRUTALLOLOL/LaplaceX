@@ -511,11 +511,18 @@ def write_report(forward, inverse, decomposition, validation):
               "- [SciPy quad](https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.quad.html)",
               "- [SciPy quad_vec](https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.quad_vec.html)",
               "- [SciPy impulse](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.impulse.html)", ""]
+    current = ROOT / "detection" / "COMPARISON_SECTION.md"
+    if current.exists():
+        lines[0] = "# Historical 1.0.0 comparison"
+        lines = ["#" + line if line.startswith("#") else line for line in lines]
+        lines = [current.read_text(encoding="utf-8").rstrip(), "", "---", "", *lines]
     (ROOT/"COMPARISON.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def update_readme(inverse, decomposition, validation):
-    research_section = ROOT / "research" / "README_SECTION.md"
+    research_section = ROOT / "detection" / "README_SECTION.md"
+    if not research_section.exists():
+        research_section = ROOT / "research" / "README_SECTION.md"
     if research_section.exists():
         path = ROOT.parent / "README.md"
         text = path.read_text(encoding="utf-8")

@@ -55,14 +55,14 @@ struct DecomposeConfig {
     std::string model_selection = "bic"; ///< "bic" (parsimonious) or "aicc"
 
     // Advanced
-    /// Legacy name: skip joint nonlinear rate/amplitude refinement.
+    /// Legacy name: skip nonlinear rate refinement.
     /// Linear amplitudes are still fitted by QR; raw ridge rates are approximate.
     bool   disable_als     = false;
 };
 
 /**
  * Fit a real sum of decaying exponentials, with signed amplitudes allowed.
- * Mexican-Hat zero crossings initialize a joint QR/LM fit in log time.
+ * Mexican-Hat zero crossings initialize a separable QR/LM fit on the original samples.
  * This routine does not estimate oscillation frequencies.
  *
  * @param t       Strictly increasing time values (t > 0)
@@ -79,7 +79,7 @@ std::vector<ExponentialComponent> decompose(
 
 /**
  * Fit using log-spaced rate-grid proposals instead of wavelet proposals.
- * Shares the same joint QR/LM optimizer, noise tests and model selection.
+ * Shares the same separable QR/LM optimizer, noise tests and model selection.
  *
  * @param t              Strictly increasing time values (t > 0)
  * @param f              Signal values at t

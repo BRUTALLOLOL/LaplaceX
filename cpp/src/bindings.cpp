@@ -285,5 +285,5 @@ PYBIND11_MODULE(_laplacex, m) {
         "Estimate noise standard deviation from first differences (MAD estimator).");
 
     // Version
-    m.attr("__version__") = "1.1.0";
+    m.attr("__version__") = "1.2.0";
 }

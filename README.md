@@ -1,4 +1,4 @@
-# LaplaceX 1.1.0
+# LaplaceX 1.2.0
 
 **Python library for exponential-mixture fitting and numerical Laplace transforms.**
 
@@ -7,7 +7,7 @@ inversion, and exponential fitting seeded by wavelet analysis in logarithmic
 time. Accuracy depends on the signal, sampling window, and configuration;
 see [evaluation and limitations](benchmarks/research/REPORT.md).
 
-Version 1.1.0 is a recent research release. Tests establish a checked software
+Version 1.2.0 is a recent research release. Tests establish a checked software
 snapshot; the experimental example and single-machine timings do not establish
 broad experimental validation or long-term adoption.
 
@@ -16,7 +16,7 @@ broad experimental validation or long-term adoption.
 | Callable forward transform | Adaptive embedded G7–K15 quadrature |
 | Sampled forward transform | Natural cubic spline, integrated at every knot |
 | Inverse transform | Weeks–Laguerre expansion with automatic scale search |
-| Exponential decomposition | Persistent log-wavelet ridges, joint QR/LM fitting, BIC |
+| Exponential decomposition | Persistent log-wavelet ridges, separable QR/LM fitting, BIC |
 | Python interface | NumPy arrays and a compiled C++ core via pybind11 |
 
 ---
@@ -28,71 +28,58 @@ Optional extras: `matplotlib` (plotting), `pandas` (DataFrame export).
 ---
 
 <!-- comparison:start -->
-## Component recovery: scope and evidence
+## Component recovery: version 1.2.0
 
-Decomposition fits real decaying exponentials and selects a count up to the
-component budget. It estimates amplitudes and rates; oscillation frequencies
-are not estimated. Log-time wavelet proposals initialize a joint fit to the
-original samples. Forward quadrature and Weeks inversion are separate routines.
+Version 1.2.0 improves count recovery while retaining the original model-selection
+criteria. Wavelets propose rates on a logarithmic time axis, followed by
+separable QR/LM refinement and BIC/AICc selection on the original samples.
+It estimates real decay rates and amplitudes, not oscillation frequencies.
 
-The expanded evaluation keeps the 1.0.0 numerical core fixed. Its main route
-disables the rate-grid retry in every section; public-default retry is a
-separate sensitivity check. Every comparator's outcomes and failures are retained.
-
-| Evaluation | Log wavelets | Variable projection + BIC | Matrix pencil + refinement |
+| Evaluation | 1.1.0 wavelets | 1.2.0 wavelets | Variable projection + BIC |
 |---|---:|---:|---:|
-| Reused validation/regression mixtures: correct counts | 480/480 | 479/480 | 235/240 |
-| New noise/separation sweep: correct counts | 708/960 | 737/960 | 323/480 |
-| New sweep: correct count **and** rate/reconstruction target | 573/960 | 613/960 | 280/480 |
+| Exposed development sweep: correct counts | 708/960 | 738/960 | 737/960 |
+| Exposed development: count **and** accuracy | 573/960 | 613/960 | 613/960 |
+| Independent sweep: correct counts | 700/960 | 730/960 | 728/960 |
+| Independent sweep: count **and** accuracy | 562/960 | 596/960 | 596/960 |
 
-Matrix-pencil denominators include only originally uniform grids. The reused
-sets include cases that informed development; the new sweep protocol was frozen
-before evaluation. It uses two components, six rate ratios (1.1–10), four Gaussian
-noise levels (0.0001–0.05), two sampling grids, and twenty realizations per cell.
-Neither result establishes reliability for arbitrary decay data.
+The independent seed was fixed before evaluation. Both sweeps cover six rate
+ratios (1.1–10), four Gaussian noise levels (0.0001–0.05), two sampling grids,
+and twenty realizations per cell. The 480 original mixtures retain 480/480
+correct counts. The primary wavelet route disables the Python rate-grid retry;
+public-default results agree on the independent sweep.
 
-### What wavelet initialization improves
+The result is a tie with this variable-projection implementation on the joint
+count/rate/reconstruction target. A two-case count advantage does not establish
+statistically significant or universal superiority. Correct counts can still
+have large rate errors: the revised independent-sweep 95th percentile is 41.11%
+and the worst is 977.83%. Closely spaced noisy modes remain difficult.
 
-An external harness compiles log-time, linear-coordinate, and rate-grid routes
-with the **same native optimizer, selection rules, compiler, and wrapper**.
-Both coordinate detectors target peaks of the negative log-time derivative;
-their point/scale budgets and relative filter widths match.
+### Speed and tradeoffs
 
-On the separated three-mode B fixture, the log route takes **1.23 ms**, versus
-**8.88 ms** for linear coordinates and **12.29 ms** for rate-grid proposals
-(**7.22×** and **9.99×** ratios). On the close pair, **linear coordinates are
-faster: 6.80 ms versus 7.96 ms**. Times are medians of seven shuffled runs on
-one Intel i7-7700HQ/Windows machine. All twelve development-exposed fixtures,
-timings, and accuracy checks are reported; the single-mode shortcut is shared.
+Nine shuffled timing rounds on twelve existing fixtures retain all accuracy
+checks. On the non-pilot multi-component fixtures, revised wavelets are
+**1.64–13.66× faster than native rate-grid proposals with the same optimizer**.
+The close-pair case improves from 5.89 to 2.11 ms. These familiar fixtures have
+been used during development; the complete tables include the pilot cases.
 
-These controls support a reduction in proposal-search cost for some multiscale
-signals. The earlier SciPy timing ratios include Python callback and solver
-differences and are not used to isolate the wavelet contribution.
+Four fixtures are slower than the previous wavelet implementation, by roughly
+8–59%, while retaining the advantage over the tested alternatives. The much
+larger gap to the Python/SciPy variable-projection baseline includes native-code
+and implementation effects; it is not attributed entirely to wavelets.
+The single-mode shortcut is shared by both native routes.
 
-### Count recovery and parameter uncertainty
+A balanced timing check selects one fixed observation from every independent-sweep
+cell: 48 cases, three rounds, all outcomes retained. Summing per-case medians,
+revised wavelets take **0.745 s**, versus **16.939 s** for the Python baseline
+(**22.73×** less time), with the same 37/48 counts and 31/48 joint successes.
+The matched native grid takes **0.339 s**, so it is **2.20× faster than wavelets**
+on this harder subset. This limits claims about a wavelet-specific speed advantage.
 
-Correct counts do not ensure correct individual rates. The new sweep's
-95th-percentile rate error among correctly counted log-wavelet fits is **31.85%**,
-with extreme failures retained in the raw records. The joint target above
-requires maximum rate error ≤10% and clean-signal RMSE ≤noise standard deviation.
-The old 21.07% worst noisy case is also reproduced by a true-count variable-
-projection fit; a local information calculation indicates weak identifiability.
-Cramér–Rao diagnostics assume known count and independent Gaussian noise and do
-not certify automatic model selection.
-
-The clean 1000:1 weak-mode examples distinguish a premature residual-stop rule
-from stronger count selection: SciPy BIC and known-count fits also recover the
-weak modes. Successful clean fits generally reach comparable float64 accuracy.
-
-Two openly licensed measured fluorescence tails add an application example.
-Their true component counts are unknown, and an additional gate delay changes
-the delayed-fluorescence count. Instrument response, background, and photon-noise
-models matter before assigning physical lifetimes.
-
-[Expanded report and reproduction instructions](benchmarks/research/REPORT.md) ·
-[Frozen protocol](benchmarks/research/PROTOCOL.md) ·
-[Release comparisons and historical measurements](benchmarks/COMPARISON.md) ·
-[Historical numerical audit](benchmarks/ACCURACY.md)
+[Full comparison, thresholds, timing distributions and raw outcomes](benchmarks/COMPARISON.md).
+[Original 1.0.0 research evaluation](benchmarks/research/REPORT.md), including
+linear-coordinate controls, matrix pencil, information bounds and experimental
+decays, remains a separate frozen record. The quadrature and Weeks-inversion
+routines are unchanged by this detection revision.
 <!-- comparison:end -->
 
 ## Quick Start
