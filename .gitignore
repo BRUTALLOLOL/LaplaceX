@@ -9,3 +9,6 @@ __pycache__/
 *.so
 *.pdb
 *.lib
+
+# Keep article drafts local.
+/manuscript/
